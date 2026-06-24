@@ -66,19 +66,22 @@
       'float fbm(vec2 p){float v=0.0,a=0.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.02+1.7;a*=0.5;}return v;}',
       'void main(){',
       ' vec2 uv=vUv;',
-      ' float t=uTime*0.5;',
+      ' float t=uTime*0.45;',
       ' vec2 p=vec2(uv.x-0.5, uv.y);',
-      // ruido que fluye hacia arriba (cuerpo) + lenguas rápidas
-      ' float n=fbm(vec2(p.x*3.0, p.y*3.0 - t*2.2));',
-      ' float licks=fbm(vec2(p.x*5.0+2.0, p.y*4.5 - t*3.4));',
-      // eje con balanceo que crece con la altura
-      ' float axis=p.x + (n-0.5)*0.34*(0.35+p.y);',
-      // ancha abajo, en punta arriba
-      ' float width=mix(0.46,0.04,pow(clamp(p.y,0.0,1.0),0.7));',
-      ' float mask=smoothstep(width,0.0,abs(axis));',
-      ' float inten=0.6+uIntensity*0.85;',
-      ' float flame=mask*(1.0-p.y*0.92)*(0.55+licks*0.8)*inten;',
-      ' flame=clamp(flame*1.7,0.0,1.0);',
+      ' float h=clamp(uv.y,0.0,1.0);',
+      // turbulencia que asciende (convección) + lenguas rápidas en la punta
+      ' float n=fbm(vec2(p.x*3.2, p.y*2.8 - t*2.4));',
+      ' float licks=fbm(vec2(p.x*6.0+5.0, p.y*5.0 - t*3.6));',
+      // balanceo sutil que crece con la altura
+      ' float sway=(n-0.5)*0.20*(0.12+h*1.0);',
+      ' float ax=abs(p.x - sway);',
+      // perfil de lagrima: senoidal (cierra en base y punta) + base redondeada anclada
+      ' float prof=sin(pow(h,0.72)*3.14159);',
+      ' float width=0.30*prof + 0.085*(1.0-smoothstep(0.0,0.22,h));',
+      ' float body=smoothstep(width,width*0.15,ax);',
+      ' float inten=0.6+uIntensity*0.8;',
+      // brillo del cuerpo + lenguas; al cerrar el perfil arriba no deja hilo
+      ' float flame=clamp((body*(0.85-h*0.5)+licks*body*0.5)*inten*1.9,0.0,1.0);',
       // rampa de color de fuego: rojo → naranja → ámbar → oro → blanco
       ' vec3 col=vec3(0.02,0.0,0.02);',
       ' col=mix(col,vec3(0.80,0.07,0.0),smoothstep(0.0,0.30,flame));',
@@ -273,13 +276,11 @@
 
   var MODAL_NP =
     '<div id="af-np" class="af-overlay"><div class="af-sheet"><button class="af-x" data-close="af-np">&times;</button>' +
+      '<span class="af-np-live"><i></i>EN VIVO</span>' +
       '<img id="af-np-art" alt=""/><h3 id="af-np-title">—</h3><p id="af-np-artist"></p>' +
-      '<div id="af-np-bar"><i id="af-np-fill"></i></div>' +
       '<div id="af-np-grid">' +
-        '<div><span>Tiempo</span><b id="af-np-time">--:--</b></div>' +
-        '<div><span>Duración</span><b id="af-np-dur">--:--</b></div>' +
         '<div><span>Estación</span><b>' + CFG.station + '</b></div>' +
-        '<div><span>Estado</span><b class="af-on">EN VIVO</b></div>' +
+        '<div><span>Señal</span><b class="af-on">Transmitiendo 24/7</b></div>' +
       '</div>' +
     '</div></div>';
 
@@ -353,9 +354,6 @@
     document.getElementById('af-np-art').src = d.art || '';
     document.getElementById('af-np-title').textContent = d.title || '—';
     document.getElementById('af-np-artist').textContent = d.artist || '';
-    document.getElementById('af-np-time').textContent = d.time || '--:--';
-    document.getElementById('af-np-dur').textContent = d.dur || '--:--';
-    document.getElementById('af-np-fill').style.width = (d.progress || 0) + '%';
   }
 
   /* ======================================================================

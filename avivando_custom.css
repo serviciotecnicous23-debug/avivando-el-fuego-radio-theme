@@ -43,16 +43,16 @@ body::after { /* resplandor de brasas inferior */
   text-align: center; padding: 22px 18px 8px; gap: 0;
 }
 #af-fire-stage {
-  position: relative; width: min(320px, 82vw); height: min(280px, 70vw);
-  margin-bottom: -6px;
+  position: relative; width: min(240px, 64vw); height: min(330px, 86vw);
+  margin-bottom: -10px;
   display: flex; align-items: flex-end; justify-content: center;
-  filter: drop-shadow(0 8px 34px rgba(255,90,0,.42));
+  filter: drop-shadow(0 6px 26px rgba(255,90,0,.4));
 }
-#af-fire-stage::after { /* base incandescente */
-  content:""; position:absolute; bottom:6%; left:50%; transform:translateX(-50%);
-  width: 62%; height: 26px; border-radius:50%;
-  background: radial-gradient(ellipse, rgba(255,150,30,.75), rgba(255,90,0,0) 70%);
-  filter: blur(3px);
+#af-fire-stage::after { /* brasa puntual en la base (sutil, redonda, no "ala") */
+  content:""; position:absolute; bottom:8%; left:50%; transform:translateX(-50%);
+  width: 34%; height: 14px; border-radius:50%;
+  background: radial-gradient(ellipse, rgba(255,170,60,.6), rgba(255,90,0,0) 72%);
+  filter: blur(4px);
 }
 #af-fire-mount, #af-fire-canvas { width: 100%; height: 100%; display: block; }
 .af-fire-fallback { /* respaldo si no hay WebGL: llama CSS */
@@ -133,7 +133,11 @@ a.album-art:hover img.album_art { transform:scale(1.04); }
 .radio-control-play-button:hover { transform:scale(1.06); }
 .radio-control-play-button svg { color:#fff !important; }
 
-.progress-bar, .volume-fill { background:linear-gradient(90deg,var(--af-fire-deep),var(--af-fire-mid),var(--af-gold)) !important; }
+.volume-fill { background:linear-gradient(90deg,var(--af-fire-deep),var(--af-fire-mid),var(--af-gold)) !important; }
+
+/* Radio EN VIVO: ocultar tiempo y barra de progreso de pista (no es una cancion con duracion) */
+.time-display-played, .time-display-total, .progress-bar,
+[class*="time-display"], .radio-control-progress, .progress, .progress-wrap { display:none !important; }
 .form-range { accent-color: var(--af-fire); }
 .form-range::-webkit-slider-thumb { background:var(--af-gold) !important; }
 .form-range::-moz-range-thumb { background:var(--af-gold) !important; border:none; }
@@ -161,6 +165,10 @@ a:hover { color: var(--af-gold); }
   font-size:20px; line-height:1; cursor:pointer; }
 .af-muted { color:var(--af-muted); font-size:14px; }
 
+.af-np-live { display:inline-flex; align-items:center; gap:7px; margin-bottom:14px;
+  font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--af-gold-light);
+  background:rgba(255,107,0,.12); border:1px solid rgba(255,107,0,.4); border-radius:999px; padding:5px 13px; }
+.af-np-live i { width:8px; height:8px; border-radius:50%; background:var(--af-fire); animation:af-pulse 1.8s ease-out infinite; }
 #af-np-art { width:230px; height:230px; max-width:74%; object-fit:cover; border-radius:18px;
   margin:6px auto 18px; display:block; border:3px solid var(--af-fire-mid); box-shadow:0 0 34px rgba(255,107,0,.5); }
 #af-np-title { margin:0 0 6px; font-size:21px; }
