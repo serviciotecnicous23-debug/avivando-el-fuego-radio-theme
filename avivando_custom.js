@@ -1,50 +1,445 @@
-window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__afInstallPrompt=e;});
-(function(){
-  if(window.__afHeroV5Injected)return;window.__afHeroV5Injected=true;
-  var MIN_URL='https://ministerioavivandoelfuego.com/';
-  var HERO='<a id="af-hero-link" href="'+MIN_URL+'" target="_blank" rel="noopener"><svg class="af-logo" viewBox="0 0 480 580" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="v4-flB" x1="50%" y1="100%" x2="50%" y2="0%"><stop offset="0%" stop-color="#5a0000"/><stop offset="35%" stop-color="#cc1100"/><stop offset="80%" stop-color="#ff4500"/><stop offset="100%" stop-color="#ff8800"/></linearGradient><linearGradient id="v4-flM" x1="50%" y1="100%" x2="50%" y2="0%"><stop offset="0%" stop-color="#aa0a00"/><stop offset="40%" stop-color="#ff3c00"/><stop offset="80%" stop-color="#ff8800"/><stop offset="100%" stop-color="#ffd700"/></linearGradient><linearGradient id="v4-flI" x1="50%" y1="100%" x2="50%" y2="0%"><stop offset="0%" stop-color="#cc4400"/><stop offset="50%" stop-color="#ff8800"/><stop offset="100%" stop-color="#ffe066"/></linearGradient><linearGradient id="v4-flC" x1="50%" y1="100%" x2="50%" y2="0%"><stop offset="0%" stop-color="#ffaa00"/><stop offset="50%" stop-color="#ffe066"/><stop offset="100%" stop-color="#fff"/></linearGradient><linearGradient id="v4-log" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#1a0a04"/><stop offset="50%" stop-color="#5a2818"/><stop offset="100%" stop-color="#1a0a04"/></linearGradient><linearGradient id="v4-glow" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="rgba(255,107,0,0)"/><stop offset="50%" stop-color="rgba(255,170,0,0.95)"/><stop offset="100%" stop-color="rgba(255,107,0,0)"/></linearGradient><radialGradient id="v4-halo" cx="50%" cy="55%" r="55%"><stop offset="0%" stop-color="rgba(255,107,0,0.5)"/><stop offset="50%" stop-color="rgba(255,107,0,0.18)"/><stop offset="100%" stop-color="rgba(255,107,0,0)"/></radialGradient><radialGradient id="v4-emberG"><stop offset="0%" stop-color="#ffe066"/><stop offset="40%" stop-color="#ff8800"/><stop offset="100%" stop-color="rgba(255,68,0,0)"/></radialGradient></defs><ellipse class="v4-halo" cx="240" cy="320" rx="200" ry="240" fill="url(#v4-halo)"/><g class="v4-orn"><circle cx="240" cy="490" r="210" fill="none" stroke="rgba(255,170,0,0.22)" stroke-width="0.7" stroke-dasharray="2 6"/></g><g class="v4-waves"><circle class="v4-wave v4-wA" cx="240" cy="490" r="60" fill="none" stroke="#ff8800" stroke-width="2"/><circle class="v4-wave v4-wB" cx="240" cy="490" r="60" fill="none" stroke="#ff6b00" stroke-width="1.5"/><circle class="v4-wave v4-wC" cx="240" cy="490" r="60" fill="none" stroke="#ffaa00" stroke-width="1.2" stroke-dasharray="3 3"/><circle class="v4-wave v4-wD" cx="240" cy="490" r="60" fill="none" stroke="#ffd700" stroke-width="1"/></g><g class="v4-flames"><path class="v4-fl v4-fl-back" fill="url(#v4-flB)" opacity="0.85" d="M150,490 C 110,420 130,330 165,260 C 180,225 195,200 210,185 C 215,210 220,250 225,300 C 230,360 240,420 230,470 C 220,490 200,495 175,495 Z"/><path class="v4-fl v4-fl-back2" fill="url(#v4-flB)" opacity="0.85" d="M330,490 C 365,415 345,320 315,250 C 295,210 280,180 268,170 C 270,200 275,250 280,295 C 282,360 285,415 290,460 C 305,485 320,492 330,490 Z"/><path class="v4-fl v4-fl-mid-l" fill="url(#v4-flM)" opacity="0.9" d="M195,495 C 165,440 175,360 200,280 C 215,225 230,180 240,135 C 245,170 248,210 250,255 C 252,320 250,395 245,455 C 230,485 215,498 200,498 Z"/><path class="v4-fl v4-fl-mid-r" fill="url(#v4-flM)" opacity="0.9" d="M285,495 C 315,440 305,360 280,280 C 265,225 252,185 245,165 C 248,200 250,240 248,285 C 246,360 250,420 255,470 C 270,490 280,498 285,498 Z"/><path class="v4-fl v4-fl-center" fill="url(#v4-flI)" d="M235,495 C 215,445 220,365 235,275 C 245,215 252,160 258,115 C 262,160 268,220 270,285 C 268,365 264,440 250,495 Z"/><path class="v4-fl v4-fl-core" fill="url(#v4-flC)" opacity="0.92" d="M243,490 C 232,435 238,355 248,265 C 252,215 256,180 258,225 C 260,295 262,385 252,490 Z"/><path class="v4-fl v4-fl-tip" fill="#fff" opacity="0.7" d="M245,440 C 240,400 244,340 250,270 C 252,230 254,200 256,250 C 258,330 256,400 250,440 Z"/></g><g class="v4-logs"><ellipse cx="240" cy="510" rx="170" ry="14" fill="#000" opacity="0.55"/><g transform="translate(240,495) rotate(15)"><ellipse cx="0" cy="0" rx="160" ry="22" fill="url(#v4-log)"/><line class="v4-crack" x1="-130" y1="-2" x2="130" y2="-2" stroke="url(#v4-glow)" stroke-width="1.5"/></g><g transform="translate(240,498) rotate(-18)"><ellipse cx="0" cy="0" rx="155" ry="20" fill="url(#v4-log)"/><line class="v4-crack2" x1="-120" y1="-2" x2="120" y2="-2" stroke="url(#v4-glow)" stroke-width="1.5"/></g><g class="v4-logEmbers"><circle cx="160" cy="538" r="1.5" fill="url(#v4-emberG)"/><circle cx="240" cy="540" r="1.8" fill="url(#v4-emberG)"/><circle cx="320" cy="538" r="1.5" fill="url(#v4-emberG)"/></g></g></svg><h1 class="af-title">Avivando</h1><div class="af-subtitle"><span class="dash left"></span><span class="txt">EL FUEGO</span><span class="dash right"></span></div><div class="af-tagline">Visitar el sitio del Ministerio</div></a>';
-  var VIZ='<div id="af-visualizer">'+Array.from({length:20},function(_,i){var h=[22,44,70,88,100,80,58,40,65,90,75,52,33,48,72,92,66,44,28,18][i];return '<div class="bar" style="height:'+h+'%"></div>';}).join('')+'</div>';
-  var MODAL='<div id="af-modal"><div id="af-modal-card"><button id="af-modal-close" type="button">X</button><img id="af-modal-art" src=""/><h3 id="af-modal-title">Sin titulo</h3><p id="af-modal-artist"></p><div id="af-modal-progress"><div id="af-modal-progress-fill" style="width:0%"></div></div><div id="af-modal-meta"><div class="meta-item"><div class="meta-label">Tiempo</div><div class="meta-value" id="af-modal-time">--:--</div></div><div class="meta-item"><div class="meta-label">Duracion</div><div class="meta-value" id="af-modal-duration">--:--</div></div><div class="meta-item"><div class="meta-label">Estacion</div><div class="meta-value">Avivando el Fuego</div></div><div class="meta-item"><div class="meta-label">Estado</div><div class="meta-value" style="color:#ff6b00">EN VIVO</div></div></div><button id="af-modal-listen-btn" type="button">Seguir escuchando</button></div></div>';
-  var INSTALL_BTN='<button id="af-install-btn" type="button" title="Instalar como app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12"/><path d="M8 12l4 4 4-4"/><path d="M5 20h14"/></svg>Instalar app</button>';
-  var INSTALL_MODAL='<div id="af-install-modal"><div id="af-install-card"><button id="af-install-close" type="button">X</button><h3>Llevate la radio como app</h3><p class="intro">Conviertela en aplicacion en tu dispositivo. Sin tienda, sin descargas pesadas.</p><div id="af-install-tabs"><button class="af-tab" data-tab="ios" type="button">iPhone</button><button class="af-tab" data-tab="android" type="button">Android</button><button class="af-tab" data-tab="desktop" type="button">PC</button></div><div class="af-pane" data-pane="ios"><h4>iPhone / iPad</h4><ol><li>Abre esta pagina en <strong>Safari</strong> (no Chrome).</li><li>Toca el icono <strong>Compartir</strong> (cuadrado con flecha hacia arriba) en la barra inferior.</li><li>Desliza hacia abajo y selecciona <strong>Anadir a pantalla de inicio</strong>.</li><li>Toca <strong>Anadir</strong> arriba a la derecha.</li></ol></div><div class="af-pane" data-pane="android"><h4>Android</h4><ol><li>Abre esta pagina en <strong>Chrome</strong>.</li><li>Toca el menu <strong>(tres puntos)</strong> arriba a la derecha.</li><li>Selecciona <strong>Instalar app</strong> o <strong>Anadir a pantalla principal</strong>.</li><li>Confirma con <strong>Instalar</strong>.</li></ol></div><div class="af-pane" data-pane="desktop"><h4>PC (Chrome / Edge)</h4><ol><li>Mira la <strong>barra de direcciones</strong>, a la derecha.</li><li>Busca un icono pequeno de monitor con flecha (<strong>Instalar</strong>).</li><li>Si no lo ves: menu <strong>(tres puntos) -> Instalar Avivando el Fuego</strong>.</li><li>Confirma. La radio queda como app independiente.</li></ol></div></div></div>';
-  function detectPlatform(){var u=navigator.userAgent;if(/iPhone|iPad|iPod/i.test(u))return 'ios';if(/Android/i.test(u))return 'android';return 'desktop';}
-  function inj(){if(document.getElementById('af-hero-link'))return;var t=document.querySelector('main')||document.querySelector('.public-page')||document.body;if(t)t.insertAdjacentHTML('afterbegin',HERO+VIZ);document.body.insertAdjacentHTML('beforeend',MODAL+INSTALL_BTN+INSTALL_MODAL);var p=detectPlatform();var dt=document.querySelector('.af-tab[data-tab="'+p+'"]');var dp=document.querySelector('.af-pane[data-pane="'+p+'"]');if(dt)dt.classList.add('active');if(dp)dp.classList.add('active');bind();}
-  function readNP(){var t=document.querySelector('.now-playing-title'),a=document.querySelector('.now-playing-artist'),i=document.querySelector('img.album_art'),tm=document.querySelector('.time-display-played'),du=document.querySelector('.time-display-total'),pb=document.querySelector('.progress-bar');var p=0;if(pb){var w=pb.style.width||'';var m=w.match(/([0-9.]+)%/);if(m)p=parseFloat(m[1]);}return{title:t?(t.innerText||'').trim():'',artist:a?(a.innerText||'').trim():'',art:i?i.src:'',time:tm?(tm.innerText||'').trim():'',duration:du?(du.innerText||'').trim():'',progress:p};}
-  function fill(){var d=readNP();document.getElementById('af-modal-art').src=d.art;document.getElementById('af-modal-title').textContent=d.title||'Sin titulo';document.getElementById('af-modal-artist').textContent=d.artist||'';document.getElementById('af-modal-time').textContent=d.time||'--:--';document.getElementById('af-modal-duration').textContent=d.duration||'--:--';document.getElementById('af-modal-progress-fill').style.width=(d.progress||0)+'%';}
-  function openSong(){fill();document.getElementById('af-modal').classList.add('show');document.body.style.overflow='hidden';if(window.__afMT)clearInterval(window.__afMT);window.__afMT=setInterval(fill,1000);}
-  function closeSong(){document.getElementById('af-modal').classList.remove('show');document.body.style.overflow='';if(window.__afMT){clearInterval(window.__afMT);window.__afMT=null;}}
-  function openInstall(){if(window.__afInstallPrompt){window.__afInstallPrompt.prompt();window.__afInstallPrompt.userChoice.then(function(){window.__afInstallPrompt=null;});}document.getElementById('af-install-modal').classList.add('show');document.body.style.overflow='hidden';}
-  function closeInstall(){document.getElementById('af-install-modal').classList.remove('show');document.body.style.overflow='';}
-  function bind(){
-    document.addEventListener('click',function(e){
-      var a=e.target.closest('a.album-art');
-      if(a){e.preventDefault();e.stopPropagation();openSong();return;}
-      if(e.target.id==='af-install-btn'||e.target.closest('#af-install-btn')){e.preventDefault();openInstall();return;}
-      var m=document.getElementById('af-modal');
-      if(m&&e.target===m)closeSong();
-      var im=document.getElementById('af-install-modal');
-      if(im&&e.target===im)closeInstall();
-    },true);
-    document.addEventListener('click',function(e){
-      if(e.target.id==='af-modal-close'||e.target.id==='af-modal-listen-btn')closeSong();
-      if(e.target.id==='af-install-close')closeInstall();
-      if(e.target.classList&&e.target.classList.contains('af-tab')){
-        var tab=e.target.dataset.tab;
-        document.querySelectorAll('.af-tab').forEach(function(t){t.classList.remove('active')});
-        document.querySelectorAll('.af-pane').forEach(function(p){p.classList.remove('active')});
-        e.target.classList.add('active');
-        var pn=document.querySelector('.af-pane[data-pane="'+tab+'"]');
-        if(pn)pn.classList.add('active');
+/* ============================================================================
+   AVIVANDO EL FUEGO — Tema AzuraCast (público)  ·  v6
+   Reconstrucción limpia y profesional.
+
+   Qué hace (en orden):
+     1. Inyecta el HERO con logo de FUEGO 3D en WebGL (no es una imagen).
+     2. Visualizador audio-reactivo (Web Audio API) con respaldo sintético seguro.
+     3. Modal "ahora sonando" y modal "instalar app" (PWA).
+     4. Media Session API → controles en pantalla de bloqueo + audio de fondo.
+     5. Pausa TODO el render cuando la pestaña está oculta  → arregla la lentitud
+        en segundo plano. Respeta prefers-reduced-motion.
+
+   Va pegado en: AzuraCast Admin → Branding → "Custom JS for Public Pages".
+   ========================================================================== */
+(function () {
+  'use strict';
+  if (window.__afThemeV6) return;
+  window.__afThemeV6 = true;
+
+  /* ---- Configuración / identidad ---------------------------------------- */
+  var CFG = {
+    ministryUrl: 'https://ministerioavivandoelfuego.com/',
+    appUrl: 'https://ministerioavivandoelfuego.com/radio',
+    station: 'Avivando el Fuego Radio',
+    tagline: 'Radio cristiana · Adoración y fuego 24/7'
+  };
+
+  /* Capturamos el prompt de instalación PWA lo antes posible. */
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    window.__afInstallPrompt = e;
+    var b = document.getElementById('af-install-btn');
+    if (b) b.classList.add('ready');
+  });
+
+  var reduceMotion = window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ======================================================================
+     1. MOTOR DE FUEGO  ·  WebGL fragment shader
+     Una llama calculada en la GPU. Muy liviana: un solo quad a pantalla,
+     ruido fbm que fluye hacia arriba, coloreado con rampa de fuego.
+     Se pausa cuando la pestaña se oculta y respeta reduce-motion.
+     ====================================================================== */
+  var Fire = (function () {
+    var canvas, gl, prog, buf, raf = 0, start = 0, running = false;
+    var uRes, uTime, uIntensity, aPos;
+    var intensity = 0.45;       // nivel base (sube con el audio)
+    var targetIntensity = 0.45;
+
+    var VERT =
+      'attribute vec2 p;varying vec2 vUv;' +
+      'void main(){vUv=p*0.5+0.5;gl_Position=vec4(p,0.0,1.0);}';
+
+    var FRAG = [
+      'precision highp float;',
+      'varying vec2 vUv;',
+      'uniform vec2 uRes;',
+      'uniform float uTime;',
+      'uniform float uIntensity;',
+      // hash + value noise + fbm
+      'float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}',
+      'float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);',
+      ' float a=hash(i),b=hash(i+vec2(1.,0.)),c=hash(i+vec2(0.,1.)),d=hash(i+vec2(1.,1.));',
+      ' return mix(mix(a,b,f.x),mix(c,d,f.x),f.y);}',
+      'float fbm(vec2 p){float v=0.0,a=0.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.02+1.7;a*=0.5;}return v;}',
+      'void main(){',
+      ' vec2 uv=vUv;',
+      ' float t=uTime*0.5;',
+      ' vec2 p=vec2(uv.x-0.5, uv.y);',
+      // ruido que fluye hacia arriba (cuerpo) + lenguas rápidas
+      ' float n=fbm(vec2(p.x*3.0, p.y*3.0 - t*2.2));',
+      ' float licks=fbm(vec2(p.x*5.0+2.0, p.y*4.5 - t*3.4));',
+      // eje con balanceo que crece con la altura
+      ' float axis=p.x + (n-0.5)*0.34*(0.35+p.y);',
+      // ancha abajo, en punta arriba
+      ' float width=mix(0.46,0.04,pow(clamp(p.y,0.0,1.0),0.7));',
+      ' float mask=smoothstep(width,0.0,abs(axis));',
+      ' float inten=0.6+uIntensity*0.85;',
+      ' float flame=mask*(1.0-p.y*0.92)*(0.55+licks*0.8)*inten;',
+      ' flame=clamp(flame*1.7,0.0,1.0);',
+      // rampa de color de fuego: rojo → naranja → ámbar → oro → blanco
+      ' vec3 col=vec3(0.02,0.0,0.02);',
+      ' col=mix(col,vec3(0.80,0.07,0.0),smoothstep(0.0,0.30,flame));',
+      ' col=mix(col,vec3(1.0,0.27,0.0),smoothstep(0.18,0.50,flame));',
+      ' col=mix(col,vec3(1.0,0.53,0.0),smoothstep(0.40,0.68,flame));',
+      ' col=mix(col,vec3(1.0,0.84,0.25),smoothstep(0.62,0.85,flame));',
+      ' col=mix(col,vec3(1.0,0.98,0.85),smoothstep(0.82,1.0,flame));',
+      // halo suave + chispas
+      ' float spark=step(0.985,hash(floor(vec2(p.x*40.0,(p.y-t*1.5)*40.0))))*flame;',
+      ' col+=spark*vec3(1.0,0.8,0.4)*0.6;',
+      ' float alpha=clamp(flame*1.25,0.0,1.0);',
+      ' gl_FragColor=vec4(col,alpha);',
+      '}'
+    ].join('\n');
+
+    function compile(type, src) {
+      var s = gl.createShader(type);
+      gl.shaderSource(s, src); gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+        console.warn('[af-fire] shader:', gl.getShaderInfoLog(s)); return null;
       }
-    });
-    document.addEventListener('keydown',function(e){
-      if(e.key==='Escape'){
-        var m=document.getElementById('af-modal');
-        if(m&&m.classList.contains('show'))closeSong();
-        var im=document.getElementById('af-install-modal');
-        if(im&&im.classList.contains('show'))closeInstall();
+      return s;
+    }
+
+    function init(mount) {
+      canvas = document.createElement('canvas');
+      canvas.id = 'af-fire-canvas';
+      mount.appendChild(canvas);
+      gl = canvas.getContext('webgl', { premultipliedAlpha: false, alpha: true, antialias: true });
+      if (!gl) return false;
+      var vs = compile(gl.VERTEX_SHADER, VERT), fs = compile(gl.FRAGMENT_SHADER, FRAG);
+      if (!vs || !fs) return false;
+      prog = gl.createProgram();
+      gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return false;
+      gl.useProgram(prog);
+      buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+      aPos = gl.getAttribLocation(prog, 'p');
+      gl.enableVertexAttribArray(aPos);
+      gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+      uRes = gl.getUniformLocation(prog, 'uRes');
+      uTime = gl.getUniformLocation(prog, 'uTime');
+      uIntensity = gl.getUniformLocation(prog, 'uIntensity');
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      resize();
+      window.addEventListener('resize', resize, { passive: true });
+      return true;
+    }
+
+    function resize() {
+      if (!canvas) return;
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      var w = canvas.clientWidth || 320, h = canvas.clientHeight || 360;
+      canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+
+    function frame(now) {
+      if (!running) return;
+      if (!start) start = now;
+      intensity += (targetIntensity - intensity) * 0.08;
+      gl.uniform2f(uRes, canvas.width, canvas.height);
+      gl.uniform1f(uTime, (now - start) / 1000);
+      gl.uniform1f(uIntensity, intensity);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      raf = requestAnimationFrame(frame);
+    }
+
+    function play() {
+      if (running || !gl) return;
+      running = true; raf = requestAnimationFrame(frame);
+    }
+    function pause() {
+      running = false; if (raf) cancelAnimationFrame(raf); raf = 0;
+    }
+    function renderStill() {           // un fotograma fijo para reduce-motion
+      if (!gl) return;
+      gl.uniform2f(uRes, canvas.width, canvas.height);
+      gl.uniform1f(uTime, 12.0);
+      gl.uniform1f(uIntensity, 0.5);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+    function setIntensity(v) { targetIntensity = 0.30 + Math.max(0, Math.min(1, v)) * 0.9; }
+
+    return {
+      mount: function (el) {
+        if (!init(el)) { el.classList.add('af-fire-fallback'); return false; }
+        if (reduceMotion) { renderStill(); } else { play(); }
+        return true;
+      },
+      play: function () { if (!reduceMotion) play(); },
+      pause: pause,
+      setIntensity: setIntensity,
+      ok: function () { return !!gl; }
+    };
+  })();
+
+  /* ======================================================================
+     2. VISUALIZADOR audio-reactivo (con respaldo sintético seguro)
+     Nunca interrumpe el audio: si el AnalyserNode no se puede usar (CORS,
+     elemento ya tomado, etc.) cae a un movimiento sintético suave.
+     ====================================================================== */
+  var Viz = (function () {
+    var BARS = 28, bars = [], wrap, raf = 0, running = false;
+    var analyser = null, data = null, ctx = null, synthT = 0;
+
+    function build(mount) {
+      wrap = document.createElement('div');
+      wrap.id = 'af-viz';
+      for (var i = 0; i < BARS; i++) {
+        var b = document.createElement('span');
+        b.className = 'af-viz-bar';
+        wrap.appendChild(b); bars.push(b);
       }
-    });
+      mount.appendChild(wrap);
+    }
+
+    function tryAudio() {
+      if (analyser) return true;
+      var audio = document.querySelector('audio');
+      if (!audio) return false;
+      try {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return false;
+        ctx = ctx || new AC();
+        var src = audio.__afSrc || ctx.createMediaElementSource(audio);
+        audio.__afSrc = src;
+        analyser = ctx.createAnalyser();
+        analyser.fftSize = 64;
+        analyser.smoothingTimeConstant = 0.8;
+        src.connect(ctx.destination);   // garantiza que el audio sigue sonando
+        src.connect(analyser);          // rama de análisis (no afecta la salida)
+        data = new Uint8Array(analyser.frequencyBinCount);
+        return true;
+      } catch (e) { analyser = null; return false; }
+    }
+
+    function tick() {
+      if (!running) return;
+      var sum = 0;
+      if (analyser) {
+        analyser.getByteFrequencyData(data);
+        for (var i = 0; i < BARS; i++) {
+          var v = (data[i % data.length] || 0) / 255;
+          bars[i].style.transform = 'scaleY(' + (0.12 + v * 0.95).toFixed(3) + ')';
+          sum += v;
+        }
+        if (sum < 0.02) { analyser = null; }   // datos vacíos (CORS) → sintético
+      } else {
+        synthT += 0.06;
+        for (var j = 0; j < BARS; j++) {
+          var s = 0.45 + 0.4 * Math.sin(synthT + j * 0.5) * Math.sin(synthT * 0.7 + j);
+          s = 0.15 + Math.abs(s) * 0.85;
+          bars[j].style.transform = 'scaleY(' + s.toFixed(3) + ')';
+          sum += s;
+        }
+      }
+      Fire.setIntensity(sum / BARS);
+      raf = requestAnimationFrame(tick);
+    }
+
+    return {
+      mount: function (el) { build(el); },
+      play: function () { if (running) return; running = true; tryAudio(); raf = requestAnimationFrame(tick); },
+      pause: function () { running = false; if (raf) cancelAnimationFrame(raf); raf = 0; },
+      hookPlay: function () { tryAudio(); }
+    };
+  })();
+
+  /* ======================================================================
+     3. DOM:  hero + visualizador + modales + botón instalar
+     ====================================================================== */
+  function el(html) { var d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
+
+  var HERO_HTML =
+    '<header id="af-hero">' +
+      '<div id="af-fire-stage"><div id="af-fire-mount"></div></div>' +
+      '<div id="af-hero-body">' +
+        '<span id="af-live"><i></i>EN VIVO · 24/7</span>' +
+        '<h1 id="af-title"><span>AVIVANDO</span><strong>EL&nbsp;FUEGO</strong></h1>' +
+        '<p id="af-tagline">' + CFG.tagline + '</p>' +
+        '<div id="af-viz-mount"></div>' +
+        '<div id="af-hero-actions">' +
+          '<a id="af-cta-ministry" href="' + CFG.ministryUrl + '" target="_blank" rel="noopener">Sitio del Ministerio</a>' +
+          '<button id="af-cta-install" type="button">Instalar app</button>' +
+        '</div>' +
+      '</div>' +
+    '</header>';
+
+  var MODAL_NP =
+    '<div id="af-np" class="af-overlay"><div class="af-sheet"><button class="af-x" data-close="af-np">&times;</button>' +
+      '<img id="af-np-art" alt=""/><h3 id="af-np-title">—</h3><p id="af-np-artist"></p>' +
+      '<div id="af-np-bar"><i id="af-np-fill"></i></div>' +
+      '<div id="af-np-grid">' +
+        '<div><span>Tiempo</span><b id="af-np-time">--:--</b></div>' +
+        '<div><span>Duración</span><b id="af-np-dur">--:--</b></div>' +
+        '<div><span>Estación</span><b>' + CFG.station + '</b></div>' +
+        '<div><span>Estado</span><b class="af-on">EN VIVO</b></div>' +
+      '</div>' +
+    '</div></div>';
+
+  var MODAL_INSTALL =
+    '<div id="af-inst" class="af-overlay"><div class="af-sheet af-sheet-left"><button class="af-x" data-close="af-inst">&times;</button>' +
+      '<h3>Llévate la radio como app</h3><p class="af-muted">Sin tienda, sin descargas pesadas. Queda como una app más en tu pantalla.</p>' +
+      '<div id="af-tabs"><button class="af-tab" data-tab="ios">iPhone</button><button class="af-tab" data-tab="android">Android</button><button class="af-tab" data-tab="desktop">PC</button></div>' +
+      '<div class="af-pane" data-pane="ios"><ol><li>Abre esta página en <strong>Safari</strong>.</li><li>Toca <strong>Compartir</strong> (cuadro con flecha ↑).</li><li>Elige <strong>Añadir a pantalla de inicio</strong>.</li><li>Toca <strong>Añadir</strong>.</li></ol></div>' +
+      '<div class="af-pane" data-pane="android"><ol><li>Abre esta página en <strong>Chrome</strong>.</li><li>Menú <strong>⋮</strong> arriba a la derecha.</li><li><strong>Instalar app</strong> / Añadir a pantalla principal.</li><li>Confirma con <strong>Instalar</strong>.</li></ol></div>' +
+      '<div class="af-pane" data-pane="desktop"><ol><li>Mira la <strong>barra de direcciones</strong>.</li><li>Icono <strong>Instalar</strong> (monitor con flecha).</li><li>O menú <strong>⋮ → Instalar</strong>.</li><li>Confirma.</li></ol></div>' +
+    '</div></div>';
+
+  var INSTALL_FAB =
+    '<button id="af-install-btn" type="button" aria-label="Instalar app">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12"/><path d="M8 12l4 4 4-4"/><path d="M5 20h14"/></svg>' +
+      '<span>Instalar app</span>' +
+    '</button>';
+
+  function detectPlatform() {
+    var u = navigator.userAgent;
+    if (/iPhone|iPad|iPod/i.test(u)) return 'ios';
+    if (/Android/i.test(u)) return 'android';
+    return 'desktop';
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',inj);else inj();
-})();(function(){if(window.__afHeroInjected)return;window.__afHeroInjected=true;var H='<div id="af-hero"><svg class="af-logo" viewBox="0 0 400 420" xmlns="http://www.w3.org/2000/svg" aria-label="Logo Avivando el Fuego"><defs><radialGradient id="af-globe-g" cx="42%" cy="38%" r="62%"><stop offset="0%" stop-color="#6b3290"/><stop offset="55%" stop-color="#3a1860"/><stop offset="100%" stop-color="#13062a"/></radialGradient><linearGradient id="af-flame-main" x1="50%" y1="100%" x2="50%" y2="0%"><stop offset="0%" stop-color="#cc1100"/><stop offset="30%" stop-color="#ff4500"/><stop offset="60%" stop-color="#ff8800"/><stop offset="85%" stop-color="#ffd700"/><stop offset="100%" stop-color="#ffe066"/></linearGradient><linearGradient id="af-flame-side" x1="50%" y1="100%" x2="50%" y2="0%"><stop offset="0%" stop-color="#990800"/><stop offset="40%" stop-color="#ff3300"/><stop offset="100%" stop-color="#ff9900"/></linearGradient><radialGradient id="af-halo-g" cx="50%" cy="50%" r="50%"><stop offset="60%" stop-color="rgba(255,107,0,0)"/><stop offset="80%" stop-color="rgba(255,107,0,0.45)"/><stop offset="100%" stop-color="rgba(255,107,0,0)"/></radialGradient></defs><circle class="halo" cx="200" cy="200" r="155" fill="url(#af-halo-g)"/><circle cx="200" cy="200" r="128" fill="url(#af-globe-g)" stroke="#0a0312" stroke-width="2"/><g opacity="0.5" fill="#0a0312"><path d="M108,180 Q128,158 152,170 Q164,195 145,218 Q118,225 102,205 Z"/><path d="M250,148 Q282,158 290,182 Q294,210 270,218 Q252,212 248,190 Z"/><path d="M255,235 Q282,228 295,245 Q298,265 275,272 Q252,266 252,250 Z"/><path d="M155,250 Q175,248 182,260 Q180,275 162,275 Q148,268 152,258 Z"/></g><circle class="ring" cx="200" cy="200" r="128" fill="none" stroke="#ff6b00" stroke-width="1"/><path class="flame-side1" fill="url(#af-flame-side)" opacity="0.92" d="M232,316 C 268,265 248,200 222,150 C 232,200 250,260 234,316 Z"/><path class="flame-side2" fill="url(#af-flame-side)" opacity="0.92" d="M168,316 C 132,265 152,200 178,150 C 168,200 150,260 166,316 Z"/><path class="flame-main" fill="url(#af-flame-main)" d="M200,322 C 168,255 192,170 208,80 C 218,160 240,250 200,322 Z"/><path class="flame-inner" fill="#ffe066" opacity="0.55" d="M195,312 C 184,250 198,190 204,140 C 210,190 222,255 200,312 Z"/></svg><h1 class="af-title">Avivando</h1><div class="af-subtitle"><span class="dash left"></span><span class="text">EL FUEGO</span><span class="dash right"></span></div><div class="af-tagline">Radio Ministerio - Transmitiendo 24/7</div></div><div id="af-visualizer" aria-hidden="true">'+Array.from({length:20},function(_,i){var h=[22,44,70,88,100,80,58,40,65,90,75,52,33,48,72,92,66,44,28,18][i];return '<div class="bar" style="height:'+h+'%"></div>';}).join('')+'</div>';function inject(){if(document.getElementById('af-hero'))return;var t=document.querySelector('main')||document.querySelector('.public-page')||document.querySelector('#main')||document.body;if(t)t.insertAdjacentHTML('afterbegin',H);}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',inject);}else{inject();}})();
+
+  function inject() {
+    if (document.getElementById('af-hero')) return;
+    var target = document.querySelector('main') ||
+      document.querySelector('.public-page') || document.body;
+    target.insertAdjacentElement('afterbegin', el(HERO_HTML));
+    document.body.appendChild(el(MODAL_NP));
+    document.body.appendChild(el(MODAL_INSTALL));
+    document.body.appendChild(el(INSTALL_FAB));
+
+    Fire.mount(document.getElementById('af-fire-mount'));
+    Viz.mount(document.getElementById('af-viz-mount'));
+    if (!reduceMotion) Viz.play();
+
+    // pestaña activa por defecto en el modal de instalación
+    var p = detectPlatform();
+    var dt = document.querySelector('.af-tab[data-tab="' + p + '"]');
+    var dp = document.querySelector('.af-pane[data-pane="' + p + '"]');
+    if (dt) dt.classList.add('active');
+    if (dp) dp.classList.add('active');
+
+    bind();
+    setupMediaSession();
+  }
+
+  /* ======================================================================
+     4. Ahora sonando: leemos el DOM nativo de AzuraCast
+     ====================================================================== */
+  function readNP() {
+    function txt(s) { var n = document.querySelector(s); return n ? (n.innerText || '').trim() : ''; }
+    var img = document.querySelector('img.album_art');
+    var pb = document.querySelector('.progress-bar');
+    var prog = 0;
+    if (pb && pb.style.width) { var m = pb.style.width.match(/([0-9.]+)%/); if (m) prog = parseFloat(m[1]); }
+    return {
+      title: txt('.now-playing-title'),
+      artist: txt('.now-playing-artist'),
+      art: img ? img.src : '',
+      time: txt('.time-display-played'),
+      dur: txt('.time-display-total'),
+      progress: prog
+    };
+  }
+
+  function fillNP() {
+    var d = readNP();
+    document.getElementById('af-np-art').src = d.art || '';
+    document.getElementById('af-np-title').textContent = d.title || '—';
+    document.getElementById('af-np-artist').textContent = d.artist || '';
+    document.getElementById('af-np-time').textContent = d.time || '--:--';
+    document.getElementById('af-np-dur').textContent = d.dur || '--:--';
+    document.getElementById('af-np-fill').style.width = (d.progress || 0) + '%';
+  }
+
+  /* ======================================================================
+     5. Media Session API → controles de bloqueo / audio de fondo
+     ====================================================================== */
+  function setupMediaSession() {
+    if (!('mediaSession' in navigator)) return;
+    var last = '';
+    setInterval(function () {
+      var d = readNP();
+      var key = d.title + '|' + d.artist;
+      if (!d.title || key === last) return;
+      last = key;
+      try {
+        navigator.mediaSession.metadata = new window.MediaMetadata({
+          title: d.title, artist: d.artist || CFG.station, album: CFG.station,
+          artwork: d.art ? [{ src: d.art, sizes: '512x512', type: 'image/jpeg' }] : []
+        });
+      } catch (e) {}
+    }, 4000);
+  }
+
+  /* ======================================================================
+     6. Eventos
+     ====================================================================== */
+  function openOverlay(id) {
+    var o = document.getElementById(id); if (!o) return;
+    if (id === 'af-np') { fillNP(); if (window.__afNPT) clearInterval(window.__afNPT); window.__afNPT = setInterval(fillNP, 1000); }
+    o.classList.add('show'); document.body.style.overflow = 'hidden';
+  }
+  function closeOverlay(id) {
+    var o = document.getElementById(id); if (!o) return;
+    o.classList.remove('show'); document.body.style.overflow = '';
+    if (id === 'af-np' && window.__afNPT) { clearInterval(window.__afNPT); window.__afNPT = null; }
+  }
+  function openInstall() {
+    if (window.__afInstallPrompt) {
+      window.__afInstallPrompt.prompt();
+      window.__afInstallPrompt.userChoice.then(function () { window.__afInstallPrompt = null; });
+    }
+    openOverlay('af-inst');
+  }
+
+  function bind() {
+    document.addEventListener('click', function (e) {
+      var art = e.target.closest && e.target.closest('a.album-art');
+      if (art) { e.preventDefault(); openOverlay('af-np'); return; }
+      if (e.target.closest && (e.target.closest('#af-install-btn') || e.target.closest('#af-cta-install'))) {
+        e.preventDefault(); openInstall(); return;
+      }
+      var c = e.target.getAttribute && e.target.getAttribute('data-close');
+      if (c) { closeOverlay(c); return; }
+      if (e.target.classList && e.target.classList.contains('af-overlay')) {
+        closeOverlay(e.target.id); return;
+      }
+      var tab = e.target.getAttribute && e.target.getAttribute('data-tab');
+      if (tab) {
+        document.querySelectorAll('.af-tab').forEach(function (t) { t.classList.remove('active'); });
+        document.querySelectorAll('.af-pane').forEach(function (p) { p.classList.remove('active'); });
+        e.target.classList.add('active');
+        var pn = document.querySelector('.af-pane[data-pane="' + tab + '"]');
+        if (pn) pn.classList.add('active');
+      }
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { closeOverlay('af-np'); closeOverlay('af-inst'); }
+    });
+
+    // Cuando empieza la reproducción, enganchamos el analizador de audio.
+    document.addEventListener('click', function (e) {
+      if (e.target.closest && e.target.closest('button')) setTimeout(function () { Viz.hookPlay(); }, 400);
+    }, true);
+  }
+
+  /* ======================================================================
+     7. Rendimiento: pausar TODO cuando la pestaña está oculta
+        (esto es lo que evita que el teléfono se ralentice en segundo plano)
+     ====================================================================== */
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { Fire.pause(); Viz.pause(); }
+    else { Fire.play(); if (!reduceMotion) Viz.play(); }
+  });
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', inject);
+  else inject();
+})();
