@@ -30,7 +30,7 @@
   });
 
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  var isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || /[?&]afmobile=1/.test(location.search);
 
   /* ======================================================================
      HERO 3D  ·  Three.js + partículas de fuego + bloom

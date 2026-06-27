@@ -44,7 +44,7 @@ body::after { /* resplandor de brasas inferior */
 }
 /* AVIVANDO + EL FUEGO en 3D real (Three.js + partículas + bloom) */
 #af-firetext {
-  position: relative; width: min(700px, 96vw); aspect-ratio: 16 / 8;
+  position: relative; width: min(700px, 100%); aspect-ratio: 16 / 8;
   margin: 2px auto -4px;
 }
 #af-firetext canvas { width: 100% !important; height: 100% !important; display: block;
@@ -73,7 +73,7 @@ body::after { /* resplandor de brasas inferior */
 #af-tagline { margin:10px 0 0; font-size:12.5px; letter-spacing:2.5px; text-transform:uppercase; color:var(--af-muted); }
 
 /* visualizador */
-#af-viz-mount { width:min(420px,86vw); margin:16px auto 4px; }
+#af-viz-mount { width:min(420px,100%); margin:16px auto 4px; }
 #af-viz { display:flex; align-items:flex-end; justify-content:center; gap:3px; height:54px; }
 #af-viz-bar, .af-viz-bar { width:7px; height:100%; transform-origin:bottom; transform:scaleY(.15);
   border-radius:4px 4px 0 0; transition:transform .09s linear;
