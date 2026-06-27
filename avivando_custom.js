@@ -1,276 +1,273 @@
 /* ============================================================================
-   AVIVANDO EL FUEGO — Tema AzuraCast (público)  ·  v6
-   Reconstrucción limpia y profesional.
+   AVIVANDO EL FUEGO — Tema AzuraCast (público)  ·  v8  (3D real)
+   Hero en 3D con Three.js: letras EXTRUIDAS con volumen + FUEGO de partículas
+   + BLOOM cinematográfico (UnrealBloomPass). Three.js se carga por ESM (CDN).
 
-   Qué hace (en orden):
-     1. Inyecta el HERO con logo de FUEGO 3D en WebGL (no es una imagen).
-     2. Visualizador audio-reactivo (Web Audio API) con respaldo sintético seguro.
-     3. Modal "ahora sonando" y modal "instalar app" (PWA).
-     4. Media Session API → controles en pantalla de bloqueo + audio de fondo.
-     5. Pausa TODO el render cuando la pestaña está oculta  → arregla la lentitud
-        en segundo plano. Respeta prefers-reduced-motion.
-
-   Va pegado en: AzuraCast Admin → Branding → "Custom JS for Public Pages".
+   · "AVIVANDO" 3D incandescente con partículas de fuego que ascienden.
+   · "EL FUEGO" 3D como carbón/brasas (emisivo tenue + bloom).
+   · Visualizador audio-reactivo, Media Session, modales, pausa con pestaña
+     oculta y calidad adaptativa (móvil más liviano).
+   Va en: AzuraCast Admin → Branding → "Custom JS for Public Pages".
    ========================================================================== */
 (function () {
   'use strict';
-  if (window.__afThemeV6) return;
-  window.__afThemeV6 = true;
+  if (window.__afThemeV8) return;
+  window.__afThemeV8 = true;
 
-  /* ---- Configuración / identidad ---------------------------------------- */
   var CFG = {
     ministryUrl: 'https://ministerioavivandoelfuego.com/',
     appUrl: 'https://ministerioavivandoelfuego.com/radio',
     station: 'Avivando el Fuego Radio',
-    tagline: 'Radio cristiana · Adoración y fuego 24/7'
+    tagline: 'Radio cristiana · Adoración y fuego 24/7',
+    word1: 'AVIVANDO', word2: 'EL FUEGO',
+    three: 'https://esm.sh/three@0.160.0',
+    font: 'https://unpkg.com/three@0.160.0/examples/fonts/helvetiker_bold.typeface.json'
   };
 
-  /* Capturamos el prompt de instalación PWA lo antes posible. */
   window.addEventListener('beforeinstallprompt', function (e) {
-    e.preventDefault();
-    window.__afInstallPrompt = e;
-    var b = document.getElementById('af-install-btn');
-    if (b) b.classList.add('ready');
+    e.preventDefault(); window.__afInstallPrompt = e;
+    var b = document.getElementById('af-install-btn'); if (b) b.classList.add('ready');
   });
 
-  var reduceMotion = window.matchMedia &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 
   /* ======================================================================
-     1. MOTOR DE FUEGO  ·  WebGL fragment shader
-     Una llama calculada en la GPU. Muy liviana: un solo quad a pantalla,
-     ruido fbm que fluye hacia arriba, coloreado con rampa de fuego.
-     Se pausa cuando la pestaña se oculta y respeta reduce-motion.
+     HERO 3D  ·  Three.js + partículas de fuego + bloom
+     Expone la misma interfaz simple: mount / play / pause / setIntensity.
      ====================================================================== */
-  var Fire = (function () {
-    var canvas, gl, prog, buf, raf = 0, start = 0, running = false;
-    var uRes, uTime, uIntensity, aPos;
-    var intensity = 0.45;       // nivel base (sube con el audio)
-    var targetIntensity = 0.45;
+  var FireText = (function () {
+    var THREE, renderer, scene, camera, composer, bloom, raf = 0, running = false, ready = false;
+    var group, fireParts, fireAttr, fireData, firelight, mountEl, embTex, glowSprite, bloomComposer, finalComposer, W = 1, H = 1;
+    var intensity = 0.4, target = 0.4, tPrev = 0;
+    var PCOUNT = isMobile ? 450 : 1500;
+    var spanX = 7.5;   // medio ancho de la palabra (se recalcula con el texto)
 
-    var VERT =
-      'attribute vec2 p;varying vec2 vUv;' +
-      'void main(){vUv=p*0.5+0.5;gl_Position=vec4(p,0.0,1.0);}';
-
-    var FRAG = [
-      'precision highp float;',
-      'varying vec2 vUv;',
-      'uniform vec2 uRes;',
-      'uniform float uTime;',
-      'uniform float uIntensity;',
-      // hash + value noise + fbm
-      'float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}',
-      'float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);',
-      ' float a=hash(i),b=hash(i+vec2(1.,0.)),c=hash(i+vec2(0.,1.)),d=hash(i+vec2(1.,1.));',
-      ' return mix(mix(a,b,f.x),mix(c,d,f.x),f.y);}',
-      'float fbm(vec2 p){float v=0.0,a=0.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.02+1.7;a*=0.5;}return v;}',
-      'void main(){',
-      ' vec2 uv=vUv;',
-      ' float t=uTime*0.45;',
-      ' vec2 p=vec2(uv.x-0.5, uv.y);',
-      ' float h=clamp(uv.y,0.0,1.0);',
-      // turbulencia que asciende (convección) + lenguas rápidas en la punta
-      ' float n=fbm(vec2(p.x*3.2, p.y*2.8 - t*2.4));',
-      ' float licks=fbm(vec2(p.x*6.0+5.0, p.y*5.0 - t*3.6));',
-      // balanceo sutil que crece con la altura
-      ' float sway=(n-0.5)*0.20*(0.12+h*1.0);',
-      ' float ax=abs(p.x - sway);',
-      // perfil de lagrima: senoidal (cierra en base y punta) + base redondeada anclada
-      ' float prof=sin(pow(h,0.72)*3.14159);',
-      ' float width=0.30*prof + 0.085*(1.0-smoothstep(0.0,0.22,h));',
-      ' float body=smoothstep(width,width*0.15,ax);',
-      ' float inten=0.6+uIntensity*0.8;',
-      // brillo del cuerpo + lenguas; al cerrar el perfil arriba no deja hilo
-      ' float flame=clamp((body*(0.85-h*0.5)+licks*body*0.5)*inten*1.9,0.0,1.0);',
-      // rampa de color de fuego: rojo → naranja → ámbar → oro → blanco
-      ' vec3 col=vec3(0.02,0.0,0.02);',
-      ' col=mix(col,vec3(0.80,0.07,0.0),smoothstep(0.0,0.30,flame));',
-      ' col=mix(col,vec3(1.0,0.27,0.0),smoothstep(0.18,0.50,flame));',
-      ' col=mix(col,vec3(1.0,0.53,0.0),smoothstep(0.40,0.68,flame));',
-      ' col=mix(col,vec3(1.0,0.84,0.25),smoothstep(0.62,0.85,flame));',
-      ' col=mix(col,vec3(1.0,0.98,0.85),smoothstep(0.82,1.0,flame));',
-      // halo suave + chispas
-      ' float spark=step(0.985,hash(floor(vec2(p.x*40.0,(p.y-t*1.5)*40.0))))*flame;',
-      ' col+=spark*vec3(1.0,0.8,0.4)*0.6;',
-      ' float alpha=clamp(flame*1.25,0.0,1.0);',
-      ' gl_FragColor=vec4(col,alpha);',
-      '}'
-    ].join('\n');
-
-    function compile(type, src) {
-      var s = gl.createShader(type);
-      gl.shaderSource(s, src); gl.compileShader(s);
-      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-        console.warn('[af-fire] shader:', gl.getShaderInfoLog(s)); return null;
-      }
-      return s;
+    function softSprite() {
+      var c = document.createElement('canvas'); c.width = c.height = 64;
+      var x = c.getContext('2d'); var g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+      g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.3, 'rgba(255,210,120,0.9)');
+      g.addColorStop(0.7, 'rgba(255,90,0,0.35)'); g.addColorStop(1, 'rgba(255,90,0,0)');
+      x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+      var t = new THREE.Texture(c); t.needsUpdate = true; return t;
     }
 
-    function init(mount) {
-      canvas = document.createElement('canvas');
-      canvas.id = 'af-fire-canvas';
-      mount.appendChild(canvas);
-      gl = canvas.getContext('webgl', { premultipliedAlpha: false, alpha: true, antialias: true });
-      if (!gl) return false;
-      var vs = compile(gl.VERTEX_SHADER, VERT), fs = compile(gl.FRAGMENT_SHADER, FRAG);
-      if (!vs || !fs) return false;
-      prog = gl.createProgram();
-      gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
-      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return false;
-      gl.useProgram(prog);
-      buf = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-      aPos = gl.getAttribLocation(prog, 'p');
-      gl.enableVertexAttribArray(aPos);
-      gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
-      uRes = gl.getUniformLocation(prog, 'uRes');
-      uTime = gl.getUniformLocation(prog, 'uTime');
-      uIntensity = gl.getUniformLocation(prog, 'uIntensity');
-      gl.enable(gl.BLEND);
-      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-      resize();
-      window.addEventListener('resize', resize, { passive: true });
+    // textura de roca/carbón candente con grietas de lava (para la superficie de las letras)
+    function emberTex() {
+      var c = document.createElement('canvas'); c.width = c.height = 512;
+      var x = c.getContext('2d'); x.fillStyle = '#160a05'; x.fillRect(0, 0, 512, 512);
+      var i, s, k;
+      for (i = 0; i < 75; i++) {                          // grietas/venas incandescentes
+        x.strokeStyle = 'rgba(255,' + (70 + (Math.random() * 130 | 0)) + ',' + (Math.random() * 40 | 0) + ',' + (0.45 + Math.random() * 0.5).toFixed(2) + ')';
+        x.lineWidth = 0.5 + Math.random() * 2.4; x.shadowColor = 'rgba(255,120,0,0.9)'; x.shadowBlur = 5 + Math.random() * 10;
+        x.beginPath(); var px = Math.random() * 512, py = Math.random() * 512; x.moveTo(px, py);
+        var segs = 3 + (Math.random() * 4 | 0);
+        for (s = 0; s < segs; s++) { px += (Math.random() * 2 - 1) * 110; py += (Math.random() * 2 - 1) * 110; x.lineTo(px, py); }
+        x.stroke();
+      }
+      x.shadowBlur = 0;
+      for (k = 0; k < 65; k++) {                          // brasas al rojo vivo
+        var r = 3 + Math.random() * 15, gx = Math.random() * 512, gy = Math.random() * 512;
+        var g = x.createRadialGradient(gx, gy, 0, gx, gy, r);
+        g.addColorStop(0, 'rgba(255,236,170,0.9)'); g.addColorStop(0.4, 'rgba(255,110,0,0.45)'); g.addColorStop(1, 'rgba(255,80,0,0)');
+        x.fillStyle = g; x.beginPath(); x.arc(gx, gy, r, 0, 6.2832); x.fill();
+      }
+      for (var nn = 0; nn < 1500; nn++) {                 // grano de roca (textura fina y relieve)
+        var nx = Math.random() * 512, ny = Math.random() * 512;
+        x.fillStyle = Math.random() > 0.6 ? 'rgba(120,50,20,0.5)' : 'rgba(0,0,0,0.4)';
+        x.fillRect(nx, ny, 1.4, 1.4);
+      }
+      var t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(0.22, 0.22); return t;
+    }
+
+    function buildParticles() {
+      var pos = new Float32Array(PCOUNT * 3), col = new Float32Array(PCOUNT * 3);
+      fireData = [];
+      for (var i = 0; i < PCOUNT; i++) reseed(i, pos, col, true);
+      var geo = new THREE.BufferGeometry();
+      fireAttr = new THREE.BufferAttribute(pos, 3); geo.setAttribute('position', fireAttr);
+      geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      var mat = new THREE.PointsMaterial({ size: isMobile ? 0.5 : 0.42, map: softSprite(), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true });
+      fireParts = new THREE.Points(geo, mat); scene.add(fireParts);
+    }
+    function reseed(i, pos, col, init) {
+      var x = (Math.random() * 2 - 1) * spanX;
+      var y = 0.2 + Math.random() * 1.6;            // nace en/junto a las letras de AVIVANDO
+      var z = (Math.random() * 2 - 1) * 0.7;
+      var life = Math.random();
+      fireData[i] = { x: x, y0: y, z: z, vy: 1.4 + Math.random() * 2.2, sway: Math.random() * 6.28, life: init ? life : 0, max: 0.7 + Math.random() * 0.8 };
+      pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = z;
+      col[i * 3] = 1; col[i * 3 + 1] = 0.5; col[i * 3 + 2] = 0.1;
+    }
+    function stepParticles(dt) {
+      var pos = fireAttr.array, col = fireParts.geometry.getAttribute('color').array, boost = 0.6 + intensity;
+      for (var i = 0; i < PCOUNT; i++) {
+        var d = fireData[i]; d.life += dt * (0.5 + d.vy * 0.18);
+        if (d.life > d.max) { d.life = 0; d.y0 = 0.2 + Math.random() * 1.4; d.x = (Math.random() * 2 - 1) * spanX; }
+        var f = d.life / d.max;
+        pos[i * 3] = d.x + Math.sin(d.sway + d.life * 3.0) * 0.5 * f;
+        pos[i * 3 + 1] = d.y0 + d.life * d.vy * boost * 1.6;
+        pos[i * 3 + 2] = d.z;
+        // color: naranja → amarillo → se apaga
+        var r = 1, g = 0.35 + f * 0.6, b = 0.05 + f * 0.25, fade = (1 - f);
+        col[i * 3] = r * fade * 1.4; col[i * 3 + 1] = g * fade * 1.2; col[i * 3 + 2] = b * fade;
+      }
+      fireAttr.needsUpdate = true; fireParts.geometry.getAttribute('color').needsUpdate = true;
+    }
+
+    function makeText(font, TextGeometry, text, size, emissive, eInt) {
+      var geo = new TextGeometry(text, { font: font, size: size, height: size * 0.32, curveSegments: 5, bevelEnabled: true, bevelThickness: size * 0.04, bevelSize: size * 0.035, bevelSegments: 2 });
+      geo.computeBoundingBox(); geo.center();
+      var mat = new THREE.MeshStandardMaterial({ color: 0x1c0d05, emissive: new THREE.Color(emissive), emissiveIntensity: eInt, emissiveMap: embTex, bumpMap: embTex, bumpScale: 0.22, roughness: 0.7, metalness: 0.15 });
+      mat.onBeforeCompile = function (sh) {   // rim/fresnel: cantos al rojo vivo
+        sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>',
+          '#include <emissivemap_fragment>\n float afFres = pow(1.0 - clamp(dot(normalize(vViewPosition), normal), 0.0, 1.0), 3.0);\n totalEmissiveRadiance += vec3(1.0, 0.5, 0.12) * afFres * 1.7;');
+      };
+      var mesh = new THREE.Mesh(geo, mat);
+      var w = geo.boundingBox.max.x - geo.boundingBox.min.x;
+      return { mesh: mesh, width: w };
+    }
+
+    async function init(el) {
+      mountEl = el;
+      THREE = await import(CFG.three);
+      var mods = await Promise.all([
+        import(CFG.three + '/examples/jsm/loaders/FontLoader.js'),
+        import(CFG.three + '/examples/jsm/geometries/TextGeometry.js'),
+        import(CFG.three + '/examples/jsm/postprocessing/EffectComposer.js'),
+        import(CFG.three + '/examples/jsm/postprocessing/RenderPass.js'),
+        import(CFG.three + '/examples/jsm/postprocessing/UnrealBloomPass.js'),
+        import(CFG.three + '/examples/jsm/postprocessing/ShaderPass.js')
+      ]);
+      var FontLoader = mods[0].FontLoader, TextGeometry = mods[1].TextGeometry,
+        EffectComposer = mods[2].EffectComposer, RenderPass = mods[3].RenderPass, UnrealBloomPass = mods[4].UnrealBloomPass, ShaderPass = mods[5].ShaderPass;
+
+      W = el.clientWidth || 600; H = el.clientHeight || 270;
+      renderer = new THREE.WebGLRenderer({ alpha: true, antialias: !isMobile });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 2));
+      renderer.setSize(W, H); renderer.setClearColor(0x000000, 0);
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
+      el.appendChild(renderer.domElement);
+
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(38, W / H, 0.1, 100); camera.position.set(0, 0, 20);
+      scene.add(new THREE.AmbientLight(0x66331a, 0.7));
+      var key = new THREE.DirectionalLight(0xffaa55, 0.8); key.position.set(0, 6, 8); scene.add(key);
+      firelight = new THREE.PointLight(0xff5a00, 2.2, 40); firelight.position.set(0, -2, 6); scene.add(firelight);
+      var back = new THREE.PointLight(0xff7a30, 1.6, 50); back.position.set(0, 3, -9); scene.add(back);  // contra para rim/volumen
+
+      group = new THREE.Group(); scene.add(group);
+      var font = await new Promise(function (res, rej) { new FontLoader().load(CFG.font, res, undefined, rej); });
+      embTex = emberTex();
+      var a = makeText(font, TextGeometry, CFG.word1, 2.4, 0xff7a18, 1.55);
+      var b = makeText(font, TextGeometry, CFG.word2, 1.7, 0xff6512, 1.45);
+      a.mesh.position.y = 1.7; b.mesh.position.y = -1.9;
+      group.add(a.mesh); group.add(b.mesh);
+      spanX = a.width / 2;
+
+      // aura de fuego cálida detrás de las letras
+      var glowMat = new THREE.SpriteMaterial({ map: softSprite(), color: 0xff5200, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.22 });
+      glowSprite = new THREE.Sprite(glowMat); glowSprite.scale.set(a.width * 1.5, 9, 1); glowSprite.position.set(0, 0.6, -3); scene.add(glowSprite);
+
+      // encuadre: ajustar cámara para que AVIVANDO entre con margen
+      var fitW = Math.max(a.width, 12) * 1.18;
+      camera.position.z = (fitW / 2) / Math.tan((camera.fov * Math.PI / 180) / 2) / camera.aspect;
+
+      buildParticles();
+
+      if (!isMobile) {   // BLOOM real con transparencia (doble composer)
+        var bloomPass = new UnrealBloomPass(new THREE.Vector2(W, H), 0.55, 0.6, 0.5);
+        bloomComposer = new EffectComposer(renderer); bloomComposer.renderToScreen = false;
+        bloomComposer.addPass(new RenderPass(scene, camera)); bloomComposer.addPass(bloomPass);
+        var mix = new ShaderPass(new THREE.ShaderMaterial({
+          uniforms: { baseTexture: { value: null }, bloomTexture: { value: bloomComposer.renderTarget2.texture } },
+          vertexShader: 'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+          fragmentShader: 'uniform sampler2D baseTexture;uniform sampler2D bloomTexture;varying vec2 vUv;void main(){vec4 b=texture2D(baseTexture,vUv);vec4 g=texture2D(bloomTexture,vUv);float ga=max(max(g.r,g.g),g.b);gl_FragColor=vec4(b.rgb+g.rgb,clamp(b.a+ga,0.0,1.0));}',
+          transparent: true
+        }), 'baseTexture');
+        mix.needsSwap = true;
+        finalComposer = new EffectComposer(renderer);
+        finalComposer.addPass(new RenderPass(scene, camera)); finalComposer.addPass(mix);
+      }
+
+      window.addEventListener('resize', onResize, { passive: true });
+      ready = true;
       return true;
     }
 
-    function resize() {
-      if (!canvas) return;
-      var dpr = Math.min(window.devicePixelRatio || 1, 2);
-      var w = canvas.clientWidth || 320, h = canvas.clientHeight || 360;
-      canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
-      gl.viewport(0, 0, canvas.width, canvas.height);
+    function onResize() {
+      if (!renderer || !mountEl) return;
+      W = mountEl.clientWidth || W; H = mountEl.clientHeight || H;
+      renderer.setSize(W, H);
+      if (bloomComposer) { bloomComposer.setSize(W, H); finalComposer.setSize(W, H); }
+      camera.aspect = W / H; camera.updateProjectionMatrix();
     }
 
+    var frameMin = 1000 / (isMobile ? 20 : 30), lastDraw = 0;
     function frame(now) {
       if (!running) return;
-      if (!start) start = now;
-      intensity += (targetIntensity - intensity) * 0.08;
-      gl.uniform2f(uRes, canvas.width, canvas.height);
-      gl.uniform1f(uTime, (now - start) / 1000);
-      gl.uniform1f(uIntensity, intensity);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       raf = requestAnimationFrame(frame);
+      if (now - lastDraw < frameMin) return;                 // límite de FPS → el audio nunca compite
+      var dt = lastDraw ? Math.min((now - lastDraw) / 1000, 0.06) : 0.033; lastDraw = now;
+      intensity += (target - intensity) * 0.1;
+      var t = now / 1000;
+      stepParticles(dt);
+      group.rotation.y = Math.sin(t * 0.3) * 0.14;          // parallax sutil
+      group.position.y = Math.sin(t * 0.6) * 0.06;
+      if (embTex) { embTex.offset.y -= dt * 0.018; embTex.offset.x += dt * 0.005; }   // lava que fluye
+      if (glowSprite) glowSprite.material.opacity = 0.18 + Math.sin(t * 4.0) * 0.06 + intensity * 0.12;
+      firelight.intensity = 1.8 + Math.sin(t * 9.0) * 0.5 + intensity;   // parpadeo de fuego
+      if (bloomComposer) { renderer.setClearColor(0x000000, 0); bloomComposer.render(); finalComposer.render(); }
+      else renderer.render(scene, camera);
     }
-
-    function play() {
-      if (running || !gl) return;
-      running = true; raf = requestAnimationFrame(frame);
-    }
-    function pause() {
-      running = false; if (raf) cancelAnimationFrame(raf); raf = 0;
-    }
-    function renderStill() {           // un fotograma fijo para reduce-motion
-      if (!gl) return;
-      gl.uniform2f(uRes, canvas.width, canvas.height);
-      gl.uniform1f(uTime, 12.0);
-      gl.uniform1f(uIntensity, 0.5);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    }
-    function setIntensity(v) { targetIntensity = 0.30 + Math.max(0, Math.min(1, v)) * 0.9; }
+    function play() { if (running || !ready) return; running = true; tPrev = 0; raf = requestAnimationFrame(frame); }
+    function pause() { running = false; if (raf) cancelAnimationFrame(raf); raf = 0; }
 
     return {
       mount: function (el) {
-        if (!init(el)) { el.classList.add('af-fire-fallback'); return false; }
-        if (reduceMotion) { renderStill(); } else { play(); }
-        return true;
+        init(el).then(function () { if (reduceMotion) renderer.render(scene, camera); else play(); })
+          .catch(function (e) { console.warn('[af] 3D fallo, respaldo texto', e); el.classList.add('af-firetext-fallback'); el.innerHTML = '<span>' + CFG.word1 + '</span><span>' + CFG.word2 + '</span>'; });
       },
       play: function () { if (!reduceMotion) play(); },
       pause: pause,
-      setIntensity: setIntensity,
-      ok: function () { return !!gl; }
+      setIntensity: function (v) { target = 0.3 + Math.max(0, Math.min(1, v)) * 0.9; },
+      ok: function () { return ready; }
     };
   })();
 
   /* ======================================================================
-     2. VISUALIZADOR audio-reactivo (con respaldo sintético seguro)
-     Nunca interrumpe el audio: si el AnalyserNode no se puede usar (CORS,
-     elemento ya tomado, etc.) cae a un movimiento sintético suave.
+     VISUALIZADOR audio-reactivo (con respaldo sintético seguro)
      ====================================================================== */
   var Viz = (function () {
-    var BARS = 28, bars = [], wrap, raf = 0, running = false;
-    var analyser = null, data = null, ctx = null, synthT = 0;
-
-    function build(mount) {
-      wrap = document.createElement('div');
-      wrap.id = 'af-viz';
-      for (var i = 0; i < BARS; i++) {
-        var b = document.createElement('span');
-        b.className = 'af-viz-bar';
-        wrap.appendChild(b); bars.push(b);
-      }
-      mount.appendChild(wrap);
-    }
-
-    function tryAudio() {
-      if (analyser) return true;
-      var audio = document.querySelector('audio');
-      if (!audio) return false;
-      try {
-        var AC = window.AudioContext || window.webkitAudioContext;
-        if (!AC) return false;
-        ctx = ctx || new AC();
-        var src = audio.__afSrc || ctx.createMediaElementSource(audio);
-        audio.__afSrc = src;
-        analyser = ctx.createAnalyser();
-        analyser.fftSize = 64;
-        analyser.smoothingTimeConstant = 0.8;
-        src.connect(ctx.destination);   // garantiza que el audio sigue sonando
-        src.connect(analyser);          // rama de análisis (no afecta la salida)
-        data = new Uint8Array(analyser.frequencyBinCount);
-        return true;
-      } catch (e) { analyser = null; return false; }
-    }
-
+    var BARS = 28, bars = [], wrap, raf = 0, running = false, analyser = null, data = null, ctx = null, synthT = 0;
+    function build(mount) { wrap = document.createElement('div'); wrap.id = 'af-viz'; for (var i = 0; i < BARS; i++) { var b = document.createElement('span'); b.className = 'af-viz-bar'; wrap.appendChild(b); bars.push(b); } mount.appendChild(wrap); }
+    // Visualizador SINTÉTICO: nunca tocamos el elemento <audio> ni el Web Audio API.
+    // (Enganchar el audio podía suspenderse en segundo plano y CORTAR la radio.)
+    function tryAudio() { return false; }
     function tick() {
-      if (!running) return;
-      var sum = 0;
-      if (analyser) {
-        analyser.getByteFrequencyData(data);
-        for (var i = 0; i < BARS; i++) {
-          var v = (data[i % data.length] || 0) / 255;
-          bars[i].style.transform = 'scaleY(' + (0.12 + v * 0.95).toFixed(3) + ')';
-          sum += v;
-        }
-        if (sum < 0.02) { analyser = null; }   // datos vacíos (CORS) → sintético
-      } else {
-        synthT += 0.06;
-        for (var j = 0; j < BARS; j++) {
-          var s = 0.45 + 0.4 * Math.sin(synthT + j * 0.5) * Math.sin(synthT * 0.7 + j);
-          s = 0.15 + Math.abs(s) * 0.85;
-          bars[j].style.transform = 'scaleY(' + s.toFixed(3) + ')';
-          sum += s;
-        }
-      }
-      Fire.setIntensity(sum / BARS);
-      raf = requestAnimationFrame(tick);
+      if (!running) return; var sum = 0, i;
+      if (analyser) { analyser.getByteFrequencyData(data); for (i = 0; i < BARS; i++) { var v = (data[i % data.length] || 0) / 255; bars[i].style.transform = 'scaleY(' + (0.12 + v * 0.95).toFixed(3) + ')'; sum += v; } if (sum < 0.02) analyser = null; }
+      else { synthT += 0.06; for (i = 0; i < BARS; i++) { var s = 0.45 + 0.4 * Math.sin(synthT + i * 0.5) * Math.sin(synthT * 0.7 + i); s = 0.15 + Math.abs(s) * 0.85; bars[i].style.transform = 'scaleY(' + s.toFixed(3) + ')'; sum += s; } }
+      FireText.setIntensity(sum / BARS); raf = requestAnimationFrame(tick);
     }
-
-    return {
-      mount: function (el) { build(el); },
-      play: function () { if (running) return; running = true; tryAudio(); raf = requestAnimationFrame(tick); },
-      pause: function () { running = false; if (raf) cancelAnimationFrame(raf); raf = 0; },
-      hookPlay: function () { tryAudio(); }
-    };
+    return { mount: function (el) { build(el); }, play: function () { if (running) return; running = true; tryAudio(); raf = requestAnimationFrame(tick); }, pause: function () { running = false; if (raf) cancelAnimationFrame(raf); raf = 0; }, hookPlay: function () { tryAudio(); } };
   })();
 
   /* ======================================================================
-     3. DOM:  hero + visualizador + modales + botón instalar
+     DOM
      ====================================================================== */
   function el(html) { var d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
 
   var HERO_HTML =
     '<header id="af-hero">' +
-      '<div id="af-fire-stage"><div id="af-fire-mount"></div></div>' +
-      '<div id="af-hero-body">' +
-        '<span id="af-live"><i></i>EN VIVO · 24/7</span>' +
-        '<h1 id="af-title"><span>AVIVANDO</span><strong>EL&nbsp;FUEGO</strong></h1>' +
-        '<p id="af-tagline">' + CFG.tagline + '</p>' +
-        '<div id="af-viz-mount"></div>' +
-        '<div id="af-hero-actions">' +
-          '<a id="af-cta-ministry" href="' + CFG.ministryUrl + '" target="_blank" rel="noopener">Sitio del Ministerio</a>' +
-          '<button id="af-cta-install" type="button">Instalar app</button>' +
-        '</div>' +
+      '<span id="af-live"><i></i>EN VIVO · 24/7</span>' +
+      '<div id="af-firetext"></div>' +
+      '<p id="af-tagline">' + CFG.tagline + '</p>' +
+      '<div id="af-viz-mount"></div>' +
+      '<div id="af-hero-actions">' +
+        '<a id="af-cta-ministry" href="' + CFG.ministryUrl + '" target="_blank" rel="noopener">Sitio del Ministerio</a>' +
+        '<button id="af-cta-install" type="button">Instalar app</button>' +
       '</div>' +
     '</header>';
 
@@ -296,148 +293,49 @@
   var INSTALL_FAB =
     '<button id="af-install-btn" type="button" aria-label="Instalar app">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12"/><path d="M8 12l4 4 4-4"/><path d="M5 20h14"/></svg>' +
-      '<span>Instalar app</span>' +
-    '</button>';
+      '<span>Instalar app</span></button>';
 
-  function detectPlatform() {
-    var u = navigator.userAgent;
-    if (/iPhone|iPad|iPod/i.test(u)) return 'ios';
-    if (/Android/i.test(u)) return 'android';
-    return 'desktop';
-  }
+  function detectPlatform() { var u = navigator.userAgent; if (/iPhone|iPad|iPod/i.test(u)) return 'ios'; if (/Android/i.test(u)) return 'android'; return 'desktop'; }
 
   function inject() {
     if (document.getElementById('af-hero')) return;
-    var target = document.querySelector('main') ||
-      document.querySelector('.public-page') || document.body;
+    var target = document.querySelector('main') || document.querySelector('.public-page') || document.body;
     target.insertAdjacentElement('afterbegin', el(HERO_HTML));
-    document.body.appendChild(el(MODAL_NP));
-    document.body.appendChild(el(MODAL_INSTALL));
-    document.body.appendChild(el(INSTALL_FAB));
-
-    Fire.mount(document.getElementById('af-fire-mount'));
-    Viz.mount(document.getElementById('af-viz-mount'));
-    if (!reduceMotion) Viz.play();
-
-    // pestaña activa por defecto en el modal de instalación
+    document.body.appendChild(el(MODAL_NP)); document.body.appendChild(el(MODAL_INSTALL)); document.body.appendChild(el(INSTALL_FAB));
+    FireText.mount(document.getElementById('af-firetext'));
+    Viz.mount(document.getElementById('af-viz-mount')); if (!reduceMotion) Viz.play();
     var p = detectPlatform();
-    var dt = document.querySelector('.af-tab[data-tab="' + p + '"]');
-    var dp = document.querySelector('.af-pane[data-pane="' + p + '"]');
-    if (dt) dt.classList.add('active');
-    if (dp) dp.classList.add('active');
-
-    bind();
-    setupMediaSession();
+    var dt = document.querySelector('.af-tab[data-tab="' + p + '"]'); var dp = document.querySelector('.af-pane[data-pane="' + p + '"]');
+    if (dt) dt.classList.add('active'); if (dp) dp.classList.add('active');
+    bind(); setupMediaSession();
   }
 
-  /* ======================================================================
-     4. Ahora sonando: leemos el DOM nativo de AzuraCast
-     ====================================================================== */
-  function readNP() {
-    function txt(s) { var n = document.querySelector(s); return n ? (n.innerText || '').trim() : ''; }
-    var img = document.querySelector('img.album_art');
-    var pb = document.querySelector('.progress-bar');
-    var prog = 0;
-    if (pb && pb.style.width) { var m = pb.style.width.match(/([0-9.]+)%/); if (m) prog = parseFloat(m[1]); }
-    return {
-      title: txt('.now-playing-title'),
-      artist: txt('.now-playing-artist'),
-      art: img ? img.src : '',
-      time: txt('.time-display-played'),
-      dur: txt('.time-display-total'),
-      progress: prog
-    };
-  }
+  function readNP() { function txt(s) { var n = document.querySelector(s); return n ? (n.innerText || '').trim() : ''; } var img = document.querySelector('img.album_art'); return { title: txt('.now-playing-title'), artist: txt('.now-playing-artist'), art: img ? img.src : '' }; }
+  function fillNP() { var d = readNP(); document.getElementById('af-np-art').src = d.art || ''; document.getElementById('af-np-title').textContent = d.title || '—'; document.getElementById('af-np-artist').textContent = d.artist || ''; }
 
-  function fillNP() {
-    var d = readNP();
-    document.getElementById('af-np-art').src = d.art || '';
-    document.getElementById('af-np-title').textContent = d.title || '—';
-    document.getElementById('af-np-artist').textContent = d.artist || '';
-  }
-
-  /* ======================================================================
-     5. Media Session API → controles de bloqueo / audio de fondo
-     ====================================================================== */
   function setupMediaSession() {
-    if (!('mediaSession' in navigator)) return;
-    var last = '';
-    setInterval(function () {
-      var d = readNP();
-      var key = d.title + '|' + d.artist;
-      if (!d.title || key === last) return;
-      last = key;
-      try {
-        navigator.mediaSession.metadata = new window.MediaMetadata({
-          title: d.title, artist: d.artist || CFG.station, album: CFG.station,
-          artwork: d.art ? [{ src: d.art, sizes: '512x512', type: 'image/jpeg' }] : []
-        });
-      } catch (e) {}
-    }, 4000);
+    if (!('mediaSession' in navigator)) return; var last = '';
+    setInterval(function () { var d = readNP(); var key = d.title + '|' + d.artist; if (!d.title || key === last) return; last = key;
+      try { navigator.mediaSession.metadata = new window.MediaMetadata({ title: d.title, artist: d.artist || CFG.station, album: CFG.station, artwork: d.art ? [{ src: d.art, sizes: '512x512', type: 'image/jpeg' }] : [] }); } catch (e) {} }, 4000);
   }
 
-  /* ======================================================================
-     6. Eventos
-     ====================================================================== */
-  function openOverlay(id) {
-    var o = document.getElementById(id); if (!o) return;
-    if (id === 'af-np') { fillNP(); if (window.__afNPT) clearInterval(window.__afNPT); window.__afNPT = setInterval(fillNP, 1000); }
-    o.classList.add('show'); document.body.style.overflow = 'hidden';
-  }
-  function closeOverlay(id) {
-    var o = document.getElementById(id); if (!o) return;
-    o.classList.remove('show'); document.body.style.overflow = '';
-    if (id === 'af-np' && window.__afNPT) { clearInterval(window.__afNPT); window.__afNPT = null; }
-  }
-  function openInstall() {
-    if (window.__afInstallPrompt) {
-      window.__afInstallPrompt.prompt();
-      window.__afInstallPrompt.userChoice.then(function () { window.__afInstallPrompt = null; });
-    }
-    openOverlay('af-inst');
-  }
-
+  function openOverlay(id) { var o = document.getElementById(id); if (!o) return; if (id === 'af-np') { fillNP(); if (window.__afNPT) clearInterval(window.__afNPT); window.__afNPT = setInterval(fillNP, 1500); } o.classList.add('show'); document.body.style.overflow = 'hidden'; }
+  function closeOverlay(id) { var o = document.getElementById(id); if (!o) return; o.classList.remove('show'); document.body.style.overflow = ''; if (id === 'af-np' && window.__afNPT) { clearInterval(window.__afNPT); window.__afNPT = null; } }
+  function openInstall() { if (window.__afInstallPrompt) { window.__afInstallPrompt.prompt(); window.__afInstallPrompt.userChoice.then(function () { window.__afInstallPrompt = null; }); } openOverlay('af-inst'); }
   function bind() {
     document.addEventListener('click', function (e) {
-      var art = e.target.closest && e.target.closest('a.album-art');
-      if (art) { e.preventDefault(); openOverlay('af-np'); return; }
-      if (e.target.closest && (e.target.closest('#af-install-btn') || e.target.closest('#af-cta-install'))) {
-        e.preventDefault(); openInstall(); return;
-      }
-      var c = e.target.getAttribute && e.target.getAttribute('data-close');
-      if (c) { closeOverlay(c); return; }
-      if (e.target.classList && e.target.classList.contains('af-overlay')) {
-        closeOverlay(e.target.id); return;
-      }
+      var art = e.target.closest && e.target.closest('a.album-art'); if (art) { e.preventDefault(); openOverlay('af-np'); return; }
+      if (e.target.closest && (e.target.closest('#af-install-btn') || e.target.closest('#af-cta-install'))) { e.preventDefault(); openInstall(); return; }
+      var c = e.target.getAttribute && e.target.getAttribute('data-close'); if (c) { closeOverlay(c); return; }
+      if (e.target.classList && e.target.classList.contains('af-overlay')) { closeOverlay(e.target.id); return; }
       var tab = e.target.getAttribute && e.target.getAttribute('data-tab');
-      if (tab) {
-        document.querySelectorAll('.af-tab').forEach(function (t) { t.classList.remove('active'); });
-        document.querySelectorAll('.af-pane').forEach(function (p) { p.classList.remove('active'); });
-        e.target.classList.add('active');
-        var pn = document.querySelector('.af-pane[data-pane="' + tab + '"]');
-        if (pn) pn.classList.add('active');
-      }
+      if (tab) { document.querySelectorAll('.af-tab').forEach(function (t) { t.classList.remove('active'); }); document.querySelectorAll('.af-pane').forEach(function (p) { p.classList.remove('active'); }); e.target.classList.add('active'); var pn = document.querySelector('.af-pane[data-pane="' + tab + '"]'); if (pn) pn.classList.add('active'); }
     });
-
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') { closeOverlay('af-np'); closeOverlay('af-inst'); }
-    });
-
-    // Cuando empieza la reproducción, enganchamos el analizador de audio.
-    document.addEventListener('click', function (e) {
-      if (e.target.closest && e.target.closest('button')) setTimeout(function () { Viz.hookPlay(); }, 400);
-    }, true);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeOverlay('af-np'); closeOverlay('af-inst'); } });
+    document.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('button')) setTimeout(function () { Viz.hookPlay(); }, 400); }, true);
   }
 
-  /* ======================================================================
-     7. Rendimiento: pausar TODO cuando la pestaña está oculta
-        (esto es lo que evita que el teléfono se ralentice en segundo plano)
-     ====================================================================== */
-  document.addEventListener('visibilitychange', function () {
-    if (document.hidden) { Fire.pause(); Viz.pause(); }
-    else { Fire.play(); if (!reduceMotion) Viz.play(); }
-  });
+  document.addEventListener('visibilitychange', function () { if (document.hidden) { FireText.pause(); Viz.pause(); } else { FireText.play(); if (!reduceMotion) Viz.play(); } });
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', inject);
-  else inject();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', inject); else inject();
 })();
