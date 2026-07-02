@@ -1,0 +1,120 @@
+/* ============================================================================
+   FABLE v10 "La Señal de Fuego" — hoja de identidad propia
+   Paleta: noche de brasas (carbón profundo → granate en el horizonte).
+   Tipografía: Cinzel (serif romana) para la marca, Inter para lo funcional.
+   Se carga DESPUÉS de avivando_custom.css y sobreescribe la identidad.
+   ========================================================================== */
+
+:root {
+  --f10-ink: #f5e9d6;
+  --f10-muted: rgba(245, 233, 214, .55);
+  --f10-gold: #e8b465;
+  --f10-gold-deep: #b97f33;
+  --f10-fire: #ff5a1f;
+  --f10-bg-top: #0b0507;
+  --f10-bg-mid: #180a0c;
+  --f10-bg-low: #2b0e0c;
+}
+
+/* ---- Fondo: noche de brasas (sustituye el morado) ---- */
+html, body {
+  background:
+    linear-gradient(180deg, var(--f10-bg-top) 0%, var(--f10-bg-mid) 46%, var(--f10-bg-low) 78%, #1a0705 100%) fixed,
+    #0b0507 !important;
+  color: var(--f10-ink) !important;
+}
+body::before { background-image: none; }          /* fuera la malla de puntos */
+body::after {                                      /* calor tenue en el horizonte */
+  background: radial-gradient(ellipse 75% 60% at 50% 108%, rgba(255, 90, 20, .18), transparent 70%);
+}
+
+/* ---- HERO editorial ---- */
+#af10-hero { position: relative; z-index: 3; padding: 44px 0 0; text-align: center; }
+#af10-lockup { padding: 0 18px; }
+
+#af10-live {
+  display: inline-flex; align-items: center; gap: 8px; margin-bottom: 26px;
+  font-family: 'Inter', system-ui, sans-serif; font-size: 10.5px; font-weight: 600;
+  letter-spacing: 3.2px; text-transform: uppercase; color: var(--f10-gold);
+  border: 1px solid rgba(232, 180, 101, .35); border-radius: 999px; padding: 7px 16px;
+  background: rgba(232, 180, 101, .06);
+}
+#af10-live i { width: 7px; height: 7px; border-radius: 50%; background: var(--f10-fire); animation: af-pulse 1.8s ease-out infinite; }
+
+#af10-kicker {
+  margin: 0 0 6px; font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12px; font-weight: 400; letter-spacing: 7px; text-transform: uppercase;
+  color: var(--f10-muted);
+}
+#af10-title {
+  margin: 0; font-family: 'Cinzel', 'Times New Roman', serif; font-weight: 700;
+  font-size: clamp(38px, 7.6vw, 78px); line-height: 1.04; letter-spacing: 2px;
+  background: linear-gradient(180deg, #fdf6e9 0%, var(--f10-gold) 55%, var(--f10-gold-deep) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-shadow: 0 0 46px rgba(232, 160, 60, .22);
+}
+#af10-title em { font-style: normal; font-weight: 500; font-size: .62em; letter-spacing: 6px; vertical-align: .12em; padding: 0 .18em; }
+
+#af10-rule { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 18px auto 12px; max-width: 420px; }
+#af10-rule span { flex: 1; height: 1px; background: linear-gradient(to var(--dir, right), transparent, rgba(232, 180, 101, .55)); }
+#af10-rule span:first-child { --dir: right; }
+#af10-rule span:last-child { --dir: left; }
+#af10-rule b { color: var(--f10-gold); font-size: 13px; font-weight: 400; }
+
+#af10-tag {
+  margin: 0; font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12.5px; letter-spacing: 4.5px; text-transform: uppercase; color: var(--f10-muted);
+}
+
+/* ---- La onda de fuego: cinemascope de borde a borde ---- */
+#af10-stage {
+  position: relative; width: 100vw; margin: 8px 0 0 calc(50% - 50vw);
+  height: clamp(190px, 30vh, 300px);
+}
+#af10-wave { width: 100%; height: 100%; display: block; }
+.af10-fallback { background: linear-gradient(180deg, transparent 30%, rgba(255, 90, 20, .5) 62%, #2b0e0c 100%); }
+
+/* ---- Acciones: botones fantasma refinados ---- */
+#af10-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: -34px 18px 10px; position: relative; z-index: 4; }
+#af10-cta-min, #af10-cta-install {
+  font-family: 'Inter', system-ui, sans-serif; font-size: 11.5px; font-weight: 600;
+  letter-spacing: 2.6px; text-transform: uppercase; text-decoration: none;
+  padding: 13px 26px; border-radius: 2px; cursor: pointer;
+  transition: background .25s ease, color .25s ease, border-color .25s ease;
+}
+#af10-cta-min { color: var(--f10-gold); border: 1px solid rgba(232, 180, 101, .45); background: rgba(11, 5, 7, .55); backdrop-filter: blur(6px); }
+#af10-cta-min:hover { background: rgba(232, 180, 101, .12); border-color: var(--f10-gold); }
+#af10-cta-install { color: #16090a; border: 1px solid var(--f10-gold); background: linear-gradient(180deg, #f3cf8d, var(--f10-gold) 60%, var(--f10-gold-deep)); }
+#af10-cta-install:hover { filter: brightness(1.08); }
+
+/* ---- Reproductor: vidrio carbón con acentos oro/fuego ---- */
+.card, .now-playing, .public-page .container, [class*="radio-player"], [class*="player-"] {
+  background: rgba(20, 9, 10, .72) !important;
+  border: 1px solid rgba(232, 180, 101, .22) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .55), 0 0 34px rgba(255, 90, 20, .07) !important;
+}
+.now-playing-title, .song-title, h1, h2, h3, h4, h5 { color: var(--f10-ink) !important; font-weight: 700 !important; }
+.now-playing-artist, .text-muted, .text-secondary, small { color: var(--f10-muted) !important; }
+img.album_art, .album-art img, img.cover { border-radius: 4px !important; border: 1px solid rgba(232, 180, 101, .4) !important; box-shadow: 0 6px 22px rgba(0, 0, 0, .5) !important; }
+.radio-control-play-button, .btn[class*="play"] {
+  background: linear-gradient(180deg, #f3cf8d, var(--f10-gold) 55%, var(--f10-gold-deep)) !important;
+  color: #16090a !important; border-radius: 50% !important;
+  box-shadow: 0 0 0 5px rgba(232, 180, 101, .1), 0 8px 24px rgba(0, 0, 0, .5) !important;
+}
+.radio-control-play-button svg { color: #16090a !important; }
+a { color: var(--f10-gold); }
+a:hover { color: #f3cf8d; }
+.form-range { accent-color: var(--f10-gold); }
+
+/* ---- Modales y botón instalar heredados: recolor ---- */
+.af-sheet { background: linear-gradient(165deg, rgba(30, 13, 12, .97), rgba(12, 5, 6, .98)); border-color: rgba(232, 180, 101, .35); }
+.af-np-live, #af-np-grid b { color: var(--f10-gold) !important; }
+#af-install-btn { background: linear-gradient(180deg, #f3cf8d, var(--f10-gold) 60%, var(--f10-gold-deep)); color: #16090a; }
+
+@media (max-width: 600px) {
+  #af10-kicker { letter-spacing: 5px; }
+  #af10-actions { margin-top: -22px; }
+  #af10-cta-min, #af10-cta-install { padding: 12px 20px; }
+}
+@media (prefers-reduced-motion: reduce) { #af10-live i { animation: none; } }
