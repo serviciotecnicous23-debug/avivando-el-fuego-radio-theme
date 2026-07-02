@@ -1,0 +1,129 @@
+/* ============================================================================
+   FABLE v11 "AVIVA EL FUEGO" — identidad 2026
+   Tipo monumental (el shader lo pinta en fuego), metadatos editoriales en
+   esquinas, ticker de "ahora sonando", grano de película. Carbón profundo.
+   Se carga DESPUÉS de avivando_custom.css.
+   ========================================================================== */
+
+:root {
+  --f11-ink: #f2e9dc;
+  --f11-muted: rgba(242, 233, 220, .52);
+  --f11-gold: #e8b465;
+  --f11-fire: #ff5a1f;
+  --f11-line: rgba(232, 180, 101, .28);
+}
+
+/* ---- Fondo: carbón profundo con calor bajo (sin morado) ---- */
+html, body {
+  background:
+    linear-gradient(180deg, #070405 0%, #120809 55%, #200b08 88%, #150605 100%) fixed,
+    #070405 !important;
+  color: var(--f11-ink) !important;
+}
+body::before { background-image: none; }
+body::after {
+  background: radial-gradient(ellipse 80% 55% at 50% 112%, rgba(255, 90, 25, .16), transparent 70%);
+}
+
+/* ---- HERO a viewport completo ---- */
+#af11-hero { position: relative; z-index: 3; padding: 0; }
+
+#af11-top {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 18px 22px 0;
+  font-family: 'Inter', system-ui, sans-serif; font-size: 10.5px; font-weight: 600;
+  letter-spacing: 3px; text-transform: uppercase;
+}
+#af11-live { display: inline-flex; align-items: center; gap: 8px; color: var(--f11-gold); }
+#af11-live i { width: 7px; height: 7px; border-radius: 50%; background: var(--f11-fire); animation: af-pulse 1.8s ease-out infinite; }
+#af11-meta { color: var(--f11-muted); }
+
+.af11-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* el lienzo del tipo en llamas — de borde a borde, monumental */
+#af11-stage {
+  position: relative; width: 100vw; margin: 6px 0 0 calc(50% - 50vw);
+  height: clamp(240px, 52vh, 560px);
+  cursor: crosshair;
+}
+#af11-blaze { width: 100%; height: 100%; display: block; }
+.af11-fallback { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  font-family: 'Anton', 'Arial Black', sans-serif; color: var(--f11-fire); font-size: clamp(40px, 12vw, 130px); line-height: .95; }
+
+#af11-hint {
+  margin: 2px 0 10px; text-align: center;
+  font-family: 'Inter', system-ui, sans-serif; font-size: 10.5px; font-weight: 400;
+  letter-spacing: 3.5px; text-transform: uppercase; color: var(--f11-muted);
+  animation: af11-hint 3.2s ease-in-out infinite;
+}
+@keyframes af11-hint { 0%, 100% { opacity: .45; } 50% { opacity: .95; } }
+
+/* ---- ticker editorial "ahora sonando" ---- */
+#af11-ticker {
+  width: 100vw; margin-left: calc(50% - 50vw);
+  border-top: 1px solid var(--f11-line); border-bottom: 1px solid var(--f11-line);
+  overflow: hidden; white-space: nowrap; padding: 10px 0;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+}
+#af11-track {
+  display: inline-block; white-space: nowrap;
+  font-family: 'Inter', system-ui, sans-serif; font-size: 12px; font-weight: 600;
+  letter-spacing: 2.4px; text-transform: uppercase; color: var(--f11-gold);
+  animation: af11-marquee 26s linear infinite; will-change: transform;
+}
+@keyframes af11-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* ---- acciones ---- */
+#af11-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 20px 18px 8px; }
+#af11-cta-min, #af11-cta-install {
+  font-family: 'Inter', system-ui, sans-serif; font-size: 11.5px; font-weight: 600;
+  letter-spacing: 2.6px; text-transform: uppercase; text-decoration: none;
+  padding: 13px 26px; border-radius: 2px; cursor: pointer;
+  transition: background .25s ease, color .25s ease, border-color .25s ease, filter .25s ease;
+}
+#af11-cta-min { color: var(--f11-gold); border: 1px solid var(--f11-line); background: rgba(7, 4, 5, .5); }
+#af11-cta-min:hover { border-color: var(--f11-gold); background: rgba(232, 180, 101, .1); }
+#af11-cta-install { color: #170a06; border: 1px solid var(--f11-gold); background: linear-gradient(180deg, #f3cf8d, var(--f11-gold) 60%, #b97f33); }
+#af11-cta-install:hover { filter: brightness(1.08); }
+
+/* ---- reproductor: vidrio carbón, acentos oro ---- */
+.card, .now-playing, .public-page .container, [class*="radio-player"], [class*="player-"] {
+  background: rgba(16, 8, 8, .74) !important;
+  border: 1px solid var(--f11-line) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .55) !important;
+}
+.now-playing-title, .song-title, h1, h2, h3, h4, h5 { color: var(--f11-ink) !important; font-weight: 700 !important; }
+.now-playing-artist, .text-muted, .text-secondary, small { color: var(--f11-muted) !important; }
+img.album_art, .album-art img, img.cover { border-radius: 4px !important; border: 1px solid var(--f11-line) !important; box-shadow: 0 6px 22px rgba(0, 0, 0, .5) !important; }
+.radio-control-play-button, .btn[class*="play"] {
+  background: linear-gradient(180deg, #f3cf8d, var(--f11-gold) 55%, #b97f33) !important;
+  color: #170a06 !important; border-radius: 50% !important;
+  box-shadow: 0 0 0 5px rgba(232, 180, 101, .1), 0 8px 24px rgba(0, 0, 0, .5) !important;
+}
+.radio-control-play-button svg { color: #170a06 !important; }
+a { color: var(--f11-gold); }
+a:hover { color: #f3cf8d; }
+.form-range { accent-color: var(--f11-gold); }
+
+/* ---- modales / FAB heredados: recolor ---- */
+.af-sheet { background: linear-gradient(165deg, rgba(26, 12, 10, .97), rgba(10, 5, 5, .98)); border-color: var(--f11-line); }
+.af-np-live, #af-np-grid b { color: var(--f11-gold) !important; }
+#af-install-btn { background: linear-gradient(180deg, #f3cf8d, var(--f11-gold) 60%, #b97f33); color: #170a06; }
+
+/* ---- grano de película sobre toda la página ---- */
+#af11-hero::after {
+  content: ""; position: fixed; inset: 0; z-index: 50; pointer-events: none; opacity: .05;
+  background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.7'/%3E%3C/svg%3E");
+}
+
+@media (max-width: 600px) {
+  #af11-top { padding: 14px 14px 0; letter-spacing: 2px; }
+  #af11-stage { height: clamp(200px, 34vh, 340px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #af11-track { animation: none; }
+  #af11-hint { animation: none; }
+  #af11-live i { animation: none; }
+}
