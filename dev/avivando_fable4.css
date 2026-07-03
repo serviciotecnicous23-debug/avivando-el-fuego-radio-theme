@@ -1,0 +1,145 @@
+/* ============================================================================
+   FABLE v12 "FUEGO DE LA MAÑANA" — identidad clara (iglesia · amanecer)
+   Misma estructura del v11: tipo monumental en el shader, metadatos en
+   esquinas, ticker, grano. Pero en LUZ: marfil cálido, tinta café, oro.
+   Se carga DESPUÉS de avivando_custom.css.
+   ========================================================================== */
+
+:root {
+  --f12-ink: #2e1a10;
+  --f12-muted: rgba(46, 26, 16, .55);
+  --f12-gold: #b97a22;
+  --f12-fire: #d84b12;
+  --f12-line: rgba(146, 94, 38, .30);
+  --f12-paper: #f7efe0;
+}
+
+/* ---- Fondo: papel de amanecer (marfil → rubor dorado abajo) ---- */
+html, body {
+  background:
+    linear-gradient(180deg, #fbf6ea 0%, #f7efe0 42%, #f4e4c9 78%, #f0d9b4 100%) fixed,
+    #f7efe0 !important;
+  color: var(--f12-ink) !important;
+}
+body::before { background-image: none; }
+body::after {
+  background: radial-gradient(ellipse 85% 55% at 50% 112%, rgba(255, 158, 60, .22), transparent 70%);
+}
+
+/* ---- HERO ---- */
+#af11-hero { position: relative; z-index: 3; padding: 0; }
+
+#af11-top {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 18px 22px 0;
+  font-family: 'Inter', system-ui, sans-serif; font-size: 10.5px; font-weight: 600;
+  letter-spacing: 3px; text-transform: uppercase;
+}
+#af11-live { display: inline-flex; align-items: center; gap: 8px; color: var(--f12-fire); }
+#af11-live i { width: 7px; height: 7px; border-radius: 50%; background: var(--f12-fire); animation: af-pulse 1.8s ease-out infinite; }
+#af11-meta { color: var(--f12-muted); }
+
+.af11-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* lienzo del tipo (tinta que arde) — de borde a borde */
+#af11-stage {
+  position: relative; width: 100vw; margin: 6px 0 0 calc(50% - 50vw);
+  height: clamp(240px, 52vh, 560px);
+  cursor: crosshair;
+}
+#af11-blaze { width: 100%; height: 100%; display: block; }
+.af11-fallback { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  font-family: 'Anton', 'Arial Black', sans-serif; color: var(--f12-fire); font-size: clamp(40px, 12vw, 130px); line-height: .95; }
+
+#af11-hint {
+  margin: 2px 0 10px; text-align: center;
+  font-family: 'Inter', system-ui, sans-serif; font-size: 10.5px; font-weight: 400;
+  letter-spacing: 3.5px; text-transform: uppercase; color: var(--f12-muted);
+  animation: af11-hint 3.2s ease-in-out infinite;
+}
+@keyframes af11-hint { 0%, 100% { opacity: .45; } 50% { opacity: .95; } }
+
+/* ---- ticker editorial ---- */
+#af11-ticker {
+  width: 100vw; margin-left: calc(50% - 50vw);
+  border-top: 1px solid var(--f12-line); border-bottom: 1px solid var(--f12-line);
+  overflow: hidden; white-space: nowrap; padding: 10px 0;
+  background: rgba(255, 252, 244, .5);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+}
+#af11-track {
+  display: inline-block; white-space: nowrap;
+  font-family: 'Inter', system-ui, sans-serif; font-size: 12px; font-weight: 600;
+  letter-spacing: 2.4px; text-transform: uppercase; color: var(--f12-gold);
+  animation: af11-marquee 26s linear infinite; will-change: transform;
+}
+@keyframes af11-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* ---- acciones ---- */
+#af11-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 20px 18px 8px; }
+#af11-cta-min, #af11-cta-install {
+  font-family: 'Inter', system-ui, sans-serif; font-size: 11.5px; font-weight: 600;
+  letter-spacing: 2.6px; text-transform: uppercase; text-decoration: none;
+  padding: 13px 26px; border-radius: 2px; cursor: pointer;
+  transition: background .25s ease, color .25s ease, border-color .25s ease, filter .25s ease;
+}
+#af11-cta-min { color: var(--f12-ink); border: 1px solid var(--f12-line); background: rgba(255, 253, 247, .6); }
+#af11-cta-min:hover { border-color: var(--f12-gold); background: rgba(185, 122, 34, .1); }
+#af11-cta-install { color: #fff8ec; border: 1px solid #a03a0e; background: linear-gradient(180deg, #e86a28, var(--f12-fire) 60%, #a83408); }
+#af11-cta-install:hover { filter: brightness(1.07); }
+
+/* ---- reproductor: tarjeta de papel con acentos fuego/oro ---- */
+.card, .now-playing, .public-page .container, [class*="radio-player"], [class*="player-"] {
+  background: rgba(255, 253, 247, .82) !important;
+  border: 1px solid var(--f12-line) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 16px 44px rgba(120, 70, 20, .16) !important;
+  backdrop-filter: blur(8px);
+}
+.now-playing-title, .song-title, h1, h2, h3, h4, h5 { color: var(--f12-ink) !important; font-weight: 700 !important; text-shadow: none !important; }
+.now-playing-artist, .text-muted, .text-secondary, small { color: var(--f12-muted) !important; }
+img.album_art, .album-art img, img.cover { border-radius: 6px !important; border: 1px solid var(--f12-line) !important; box-shadow: 0 6px 18px rgba(120, 70, 20, .22) !important; }
+.radio-control-play-button, .btn[class*="play"] {
+  background: linear-gradient(180deg, #e86a28, var(--f12-fire) 55%, #a83408) !important;
+  color: #fff8ec !important; border-radius: 50% !important;
+  box-shadow: 0 0 0 5px rgba(216, 75, 18, .12), 0 8px 22px rgba(160, 58, 14, .35) !important;
+}
+.radio-control-play-button svg { color: #fff8ec !important; }
+a { color: var(--f12-gold); }
+a:hover { color: var(--f12-fire); }
+.form-range { accent-color: var(--f12-fire); }
+
+/* ---- modales / FAB: papel cálido ---- */
+.af-overlay { background: rgba(60, 34, 14, .35); backdrop-filter: blur(14px); }
+.af-sheet { background: linear-gradient(165deg, #fffdf7, #f8efdd); border-color: var(--f12-line);
+  box-shadow: 0 30px 80px rgba(90, 50, 15, .3) !important; }
+.af-sheet h3, .af-sheet b { color: var(--f12-ink) !important; }
+.af-muted, #af-np-grid span { color: var(--f12-muted) !important; }
+.af-np-live, #af-np-grid b { color: var(--f12-gold) !important; }
+#af-np-grid > div { background: rgba(185, 122, 34, .07); border-color: var(--f12-line); }
+.af-x { background: rgba(185, 122, 34, .1); border-color: var(--f12-line); color: var(--f12-ink); }
+.af-tab { background: rgba(185, 122, 34, .07); border-color: var(--f12-line); color: var(--f12-muted); }
+.af-tab.active { background: linear-gradient(180deg, #e86a28, var(--f12-fire)); color: #fff8ec; border-color: transparent; }
+.af-pane ol { color: var(--f12-ink); }
+.af-pane strong { color: var(--f12-fire); }
+#af-np-title { color: var(--f12-ink) !important; }
+#af-np-artist { color: var(--f12-muted); }
+#af-install-btn { background: linear-gradient(180deg, #e86a28, var(--f12-fire) 60%, #a83408); color: #fff8ec;
+  box-shadow: 0 8px 22px rgba(160, 58, 14, .35); }
+
+/* ---- grano de papel sutil ---- */
+#af11-hero::after {
+  content: ""; position: fixed; inset: 0; z-index: 50; pointer-events: none; opacity: .035;
+  background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.7'/%3E%3C/svg%3E");
+}
+
+@media (max-width: 600px) {
+  #af11-top { padding: 14px 14px 0; letter-spacing: 2px; }
+  #af11-stage { height: clamp(200px, 34vh, 340px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #af11-track { animation: none; }
+  #af11-hint { animation: none; }
+  #af11-live i { animation: none; }
+}
