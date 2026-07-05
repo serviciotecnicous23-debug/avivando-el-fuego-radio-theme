@@ -41,7 +41,7 @@
     var uTime, uTrail, uAspect, uBoost;
     var stage, trail = [], lastMove = 0, boost = 0.75, boostT = 0.75;
     var N = 12, flat = new Float32Array(N * 3);
-    var frameMin = 1000 / (isMobile ? 20 : 30);
+    var frameMin = 1000 / 30;
     var TEXW = 1408, TEXH = 704;
 
     var VERT = 'attribute vec2 p;varying vec2 vUv;void main(){vUv=p*0.5+0.5;gl_Position=vec4(p,0.0,1.0);}';
@@ -119,7 +119,7 @@
       stage = mount;
       canvas = document.createElement('canvas'); canvas.id = 'af-firetext-canvas';
       mount.appendChild(canvas);
-      gl = canvas.getContext('webgl', { premultipliedAlpha: false, alpha: true, antialias: false });
+      gl = canvas.getContext('webgl', { premultipliedAlpha: false, alpha: true, antialias: true });
       if (!gl) return false;
       var vs = compile(gl.VERTEX_SHADER, VERT), fs = compile(gl.FRAGMENT_SHADER, FRAG);
       if (!vs || !fs) return false;
@@ -163,7 +163,8 @@
     }
     function resize() {
       if (!canvas) return;
-      var dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 1.75);
+      // en teléfono la nitidez manda: respetamos el pixel ratio real (tope 3)
+      var dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 3 : 2);
       var w = canvas.clientWidth || 700, h = canvas.clientHeight || 350;
       canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
       gl.viewport(0, 0, canvas.width, canvas.height);
