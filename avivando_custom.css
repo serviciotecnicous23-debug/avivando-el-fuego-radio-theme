@@ -203,3 +203,76 @@ a:hover { color: var(--af-gold); }
   #af-live i { animation:none; }
   #af-install-btn.ready { animation:none; }
 }
+
+/* ============================================================================
+   v13 · Actualización del reproductor (parte de abajo)
+   Mantiene TODOS los elementos y funciones; solo sube el acabado.
+   ========================================================================== */
+
+/* marco premium: borde degradado fuego-oro + vidrio más profundo */
+.public-page .card {
+  position: relative !important;
+  border: 1px solid transparent !important;
+  background:
+    linear-gradient(rgba(36,14,58,.88), rgba(24,9,40,.92)) padding-box,
+    linear-gradient(135deg, rgba(255,107,0,.6), rgba(255,215,0,.28) 45%, rgba(255,107,0,.55)) border-box !important;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 48px rgba(0,0,0,.5), 0 0 30px rgba(255,107,0,.10) !important;
+}
+
+/* etiqueta editorial "AHORA SUENA" en la esquina de la tarjeta */
+.public-page .card::before {
+  content: "AHORA SUENA";
+  position: absolute; top: 14px; right: 16px;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 2.4px;
+  color: var(--af-gold-light); opacity: .75;
+  border: 1px solid rgba(255,107,0,.35); border-radius: 999px;
+  padding: 4px 11px; background: rgba(255,107,0,.08);
+  animation: af13-chip 3s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes af13-chip { 0%,100% { opacity: .55; } 50% { opacity: .95; } }
+
+/* el play es el foco: halo que late invitando a presionar */
+.radio-control-play-button { position: relative !important; }
+.radio-control-play-button::after {
+  content: ""; position: absolute; inset: -7px; border-radius: 50%;
+  border: 2px solid rgba(255,140,0,.55);
+  animation: af13-halo 2.4s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes af13-halo {
+  0% { transform: scale(.82); opacity: .9; }
+  70%, 100% { transform: scale(1.45); opacity: 0; }
+}
+
+/* portada con brasa que respira */
+img.album_art, .album-art img {
+  animation: af13-art 3.6s ease-in-out infinite;
+}
+@keyframes af13-art {
+  0%, 100% { box-shadow: 0 0 18px rgba(255,107,0,.30); }
+  50% { box-shadow: 0 0 34px rgba(255,140,0,.55); }
+}
+
+/* Song History / Playlist como chips (consistentes con los botones de arriba) */
+.public-page .card a:not(.album-art) {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid rgba(255,107,0,.3); border-radius: 999px;
+  padding: 7px 15px; background: rgba(255,107,0,.07);
+  font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--af-gold-light); text-decoration: none;
+  transition: background .2s ease, border-color .2s ease;
+}
+.public-page .card a:not(.album-art):hover {
+  background: rgba(255,107,0,.16); border-color: var(--af-fire-mid); color: #fff;
+}
+
+/* volumen más fino y "Powered by" discreto */
+.form-range { height: 4px; }
+.powered, .public-page > p:last-child { opacity: .45; }
+
+@media (prefers-reduced-motion: reduce) {
+  .public-page .card::before, .radio-control-play-button::after,
+  img.album_art, .album-art img { animation: none; }
+}
