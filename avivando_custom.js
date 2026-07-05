@@ -1,27 +1,25 @@
 /* ============================================================================
-   AVIVANDO EL FUEGO — Tema AzuraCast (público)  ·  v8  (3D real)
-   Hero en 3D con Three.js: letras EXTRUIDAS con volumen + FUEGO de partículas
-   + BLOOM cinematográfico (UnrealBloomPass). Three.js se carga por ESM (CDN).
-
-   · "AVIVANDO" 3D incandescente con partículas de fuego que ascienden.
-   · "EL FUEGO" 3D como carbón/brasas (emisivo tenue + bloom).
-   · Visualizador audio-reactivo, Media Session, modales, pausa con pestaña
-     oculta y calidad adaptativa (móvil más liviano).
+   AVIVANDO EL FUEGO — Tema AzuraCast (público) · v13
+   LA MISMA PÁGINA del v8 (fondo morado, visualizador, botones, reproductor,
+   modales) — solo cambian LAS LETRAS del logo: en lugar de la geometría 3D
+   de Three.js, tipografía monumental (Anton) pintada en FUEGO por un shader
+   (la técnica nueva). Las letras arden solas con un soplo que las recorre,
+   y si pasas la mano/dedo, arden más donde tocas.
+     · Más liviano que v8 (sin Three.js) y más nítido.
+     · Audio intocable · Media Session · FPS limitado · pausa en oculto.
    Va en: AzuraCast Admin → Branding → "Custom JS for Public Pages".
    ========================================================================== */
 (function () {
   'use strict';
-  if (window.__afThemeV8) return;
-  window.__afThemeV8 = true;
+  if (window.__afThemeV13) return;
+  window.__afThemeV13 = true;
 
   var CFG = {
     ministryUrl: 'https://ministerioavivandoelfuego.com/',
-    appUrl: 'https://ministerioavivandoelfuego.com/radio',
     station: 'Avivando el Fuego Radio',
     tagline: 'Radio cristiana · Adoración y fuego 24/7',
     word1: 'AVIVANDO', word2: 'EL FUEGO',
-    three: 'https://esm.sh/three@0.160.0',
-    font: 'https://unpkg.com/three@0.160.0/examples/fonts/helvetiker_bold.typeface.json'
+    fontHref: 'https://fonts.googleapis.com/css2?family=Anton&display=swap'
   };
 
   window.addEventListener('beforeinstallprompt', function (e) {
@@ -31,231 +29,206 @@
 
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || /[?&]afmobile=1/.test(location.search);
+  var FORCE = /[?&]afforce=1/.test(location.search);   // solo dev
+
+  (function () { var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = CFG.fontHref; document.head.appendChild(l); })();
 
   /* ======================================================================
-     HERO 3D  ·  Three.js + partículas de fuego + bloom
-     Expone la misma interfaz simple: mount / play / pause / setIntensity.
+     LAS LETRAS · tipografía en fuego (shader; la palabra es la máscara)
      ====================================================================== */
   var FireText = (function () {
-    var THREE, renderer, scene, camera, composer, bloom, raf = 0, running = false, ready = false;
-    var group, fireParts, fireAttr, fireData, firelight, mountEl, embTex, glowSprite, bloomComposer, finalComposer, W = 1, H = 1;
-    var intensity = 0.4, target = 0.4, tPrev = 0;
-    var PCOUNT = isMobile ? 450 : 1500;
-    var spanX = 7.5;   // medio ancho de la palabra (se recalcula con el texto)
+    var canvas, gl, prog, tex, raf = 0, running = false, born = 0, lastDraw = 0;
+    var uTime, uTrail, uAspect, uBoost;
+    var stage, trail = [], lastMove = 0, boost = 0.75, boostT = 0.75;
+    var N = 12, flat = new Float32Array(N * 3);
+    var frameMin = 1000 / (isMobile ? 20 : 30);
+    var TEXW = 1408, TEXH = 704;
 
-    function softSprite() {
-      var c = document.createElement('canvas'); c.width = c.height = 64;
-      var x = c.getContext('2d'); var g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
-      g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.3, 'rgba(255,210,120,0.9)');
-      g.addColorStop(0.7, 'rgba(255,90,0,0.35)'); g.addColorStop(1, 'rgba(255,90,0,0)');
-      x.fillStyle = g; x.fillRect(0, 0, 64, 64);
-      var t = new THREE.Texture(c); t.needsUpdate = true; return t;
-    }
+    var VERT = 'attribute vec2 p;varying vec2 vUv;void main(){vUv=p*0.5+0.5;gl_Position=vec4(p,0.0,1.0);}';
+    var FRAG = [
+      'precision highp float;',
+      'varying vec2 vUv;',
+      'uniform sampler2D uMask;',
+      'uniform float uTime;',
+      'uniform float uAspect;',
+      'uniform float uBoost;',
+      'uniform vec3 uTrail[' + N + '];',
+      'float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}',
+      'float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);',
+      ' float a=hash(i),b=hash(i+vec2(1.,0.)),c=hash(i+vec2(0.,1.)),d=hash(i+vec2(1.,1.));',
+      ' return mix(mix(a,b,f.x),mix(c,d,f.x),f.y);}',
+      'float fbm(vec2 p){float v=0.0,a=0.5;for(int i=0;i<4;i++){v+=a*noise(p);p=p*2.03+1.7;a*=0.5;}return v;}',
+      'float M(vec2 uv){return texture2D(uMask,vec2(uv.x,1.0-uv.y)).a;}',
+      'void main(){',
+      ' vec2 uv=vUv;',
+      ' float t=uTime;',
+      ' float m=M(uv);',
+      // rastro de calor (cursor/dedo) — suma de gaussianas con decaimiento
+      ' float th=0.0;',
+      ' for(int i=0;i<' + N + ';i++){vec3 p=uTrail[i];vec2 d=(uv-p.xy)*vec2(uAspect,1.0);th+=p.z*exp(-dot(d,d)*120.0);}',
+      ' th=clamp(th,0.0,1.6)*uBoost;',
+      // turbulencia ascendente
+      ' float n=fbm(vec2(uv.x*6.0, uv.y*3.0 - t*1.1));',
+      ' float n2=fbm(vec2(uv.x*12.0+7.0, uv.y*6.0 - t*1.9));',
+      // las letras arden solas (brasa viva) y más donde pasa la mano
+      ' float smolder=m*(0.44+0.18*n2+0.07*sin(t*1.3+uv.x*9.0));',
+      ' float ign=m*th*(0.95+0.6*n);',
+      // llamas: la máscara muestreada desde abajo asciende con el calor
+      ' float up=(0.06+th*0.16)*n + 0.02*n2;',
+      ' float lick=M(uv+vec2((n-0.5)*0.05,-up));',
+      ' float lick2=M(uv+vec2((n2-0.5)*0.09,-up*1.9));',
+      ' float fl=(lick*0.85+lick2*0.38)*n*(0.30+th*1.1);',
+      ' float cloud=th*0.20*n;',
+      ' float heat=clamp(smolder+ign+fl+cloud,0.0,1.55);',
+      // rampa para fondo morado: granate → rojo → naranja → oro → blanco
+      ' vec3 col=vec3(0.0);',
+      ' col=mix(col,vec3(0.30,0.02,0.02),smoothstep(0.03,0.19,heat));',
+      ' col=mix(col,vec3(0.82,0.11,0.01),smoothstep(0.16,0.42,heat));',
+      ' col=mix(col,vec3(1.0,0.36,0.02),smoothstep(0.38,0.66,heat));',
+      ' col=mix(col,vec3(1.0,0.71,0.16),smoothstep(0.62,0.94,heat));',
+      ' col=mix(col,vec3(1.0,0.97,0.83),smoothstep(0.94,1.30,heat));',
+      // chispas ascendentes
+      ' float sp=step(0.9955,hash(floor(vec2(uv.x*130.0,(uv.y - t*0.5)*80.0))))*smoothstep(0.10,0.5,heat);',
+      ' col+=sp*vec3(1.0,0.8,0.42)*0.9;',
+      ' float alpha=clamp(heat*1.6+sp,0.0,1.0);',
+      ' gl_FragColor=vec4(col,alpha);',
+      '}'
+    ].join('\n');
 
-    // textura de roca/carbón candente con grietas de lava (para la superficie de las letras)
-    function emberTex() {
-      var c = document.createElement('canvas'); c.width = c.height = 512;
-      var x = c.getContext('2d'); x.fillStyle = '#160a05'; x.fillRect(0, 0, 512, 512);
-      var i, s, k;
-      for (i = 0; i < 75; i++) {                          // grietas/venas incandescentes
-        x.strokeStyle = 'rgba(255,' + (70 + (Math.random() * 130 | 0)) + ',' + (Math.random() * 40 | 0) + ',' + (0.45 + Math.random() * 0.5).toFixed(2) + ')';
-        x.lineWidth = 0.5 + Math.random() * 2.4; x.shadowColor = 'rgba(255,120,0,0.9)'; x.shadowBlur = 5 + Math.random() * 10;
-        x.beginPath(); var px = Math.random() * 512, py = Math.random() * 512; x.moveTo(px, py);
-        var segs = 3 + (Math.random() * 4 | 0);
-        for (s = 0; s < segs; s++) { px += (Math.random() * 2 - 1) * 110; py += (Math.random() * 2 - 1) * 110; x.lineTo(px, py); }
-        x.stroke();
+    function drawMask() {
+      var c = document.createElement('canvas'); c.width = TEXW; c.height = TEXH;
+      var x = c.getContext('2d'); x.clearRect(0, 0, TEXW, TEXH);
+      x.fillStyle = '#fff'; x.textAlign = 'center'; x.textBaseline = 'alphabetic';
+      function fit(text, maxW, startFs) {
+        var fs = startFs; x.font = fs + 'px Anton, "Arial Black", sans-serif';
+        while (x.measureText(text).width > maxW && fs > 30) { fs -= 6; x.font = fs + 'px Anton, "Arial Black", sans-serif'; }
+        return fs;
       }
-      x.shadowBlur = 0;
-      for (k = 0; k < 65; k++) {                          // brasas al rojo vivo
-        var r = 3 + Math.random() * 15, gx = Math.random() * 512, gy = Math.random() * 512;
-        var g = x.createRadialGradient(gx, gy, 0, gx, gy, r);
-        g.addColorStop(0, 'rgba(255,236,170,0.9)'); g.addColorStop(0.4, 'rgba(255,110,0,0.45)'); g.addColorStop(1, 'rgba(255,80,0,0)');
-        x.fillStyle = g; x.beginPath(); x.arc(gx, gy, r, 0, 6.2832); x.fill();
+      var f1 = fit(CFG.word1, TEXW * 0.97, 340);
+      x.fillText(CFG.word1, TEXW / 2, f1 * 0.98);
+      var f2 = fit(CFG.word2, TEXW * 0.60, 260);
+      x.fillText(CFG.word2, TEXW / 2, f1 * 1.02 + f2 * 0.98);
+      return c;
+    }
+    function compile(type, src) {
+      var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.warn('[af13]', gl.getShaderInfoLog(s)); return null; }
+      return s;
+    }
+    function init(mount) {
+      stage = mount;
+      canvas = document.createElement('canvas'); canvas.id = 'af-firetext-canvas';
+      mount.appendChild(canvas);
+      gl = canvas.getContext('webgl', { premultipliedAlpha: false, alpha: true, antialias: false });
+      if (!gl) return false;
+      var vs = compile(gl.VERTEX_SHADER, VERT), fs = compile(gl.FRAGMENT_SHADER, FRAG);
+      if (!vs || !fs) return false;
+      prog = gl.createProgram(); gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return false;
+      gl.useProgram(prog);
+      var buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+      var aPos = gl.getAttribLocation(prog, 'p');
+      gl.enableVertexAttribArray(aPos); gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+      uTime = gl.getUniformLocation(prog, 'uTime');
+      uTrail = gl.getUniformLocation(prog, 'uTrail');
+      uAspect = gl.getUniformLocation(prog, 'uAspect');
+      uBoost = gl.getUniformLocation(prog, 'uBoost');
+      tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, drawMask());
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.uniform1i(gl.getUniformLocation(prog, 'uMask'), 0);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      resize(); window.addEventListener('resize', resize, { passive: true });
+      // si Anton llega después, redibujamos la máscara con la fuente buena
+      if (document.fonts && document.fonts.addEventListener) {
+        document.fonts.addEventListener('loadingdone', function () {
+          if (gl && tex) { gl.bindTexture(gl.TEXTURE_2D, tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, drawMask()); }
+        });
       }
-      for (var nn = 0; nn < 1500; nn++) {                 // grano de roca (textura fina y relieve)
-        var nx = Math.random() * 512, ny = Math.random() * 512;
-        x.fillStyle = Math.random() > 0.6 ? 'rgba(120,50,20,0.5)' : 'rgba(0,0,0,0.4)';
-        x.fillRect(nx, ny, 1.4, 1.4);
+      function feed(cx, cy) {
+        var r = stage.getBoundingClientRect();
+        var x = (cx - r.left) / r.width, y = 1 - (cy - r.top) / r.height;
+        if (x < -0.1 || x > 1.1 || y < -0.1 || y > 1.1) return;
+        trail.unshift({ x: x, y: y, s: 1.0 });
+        if (trail.length > N) trail.length = N;
+        lastMove = performance.now();
       }
-      var t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(0.22, 0.22); return t;
-    }
-
-    function buildParticles() {
-      var pos = new Float32Array(PCOUNT * 3), col = new Float32Array(PCOUNT * 3);
-      fireData = [];
-      for (var i = 0; i < PCOUNT; i++) reseed(i, pos, col, true);
-      var geo = new THREE.BufferGeometry();
-      fireAttr = new THREE.BufferAttribute(pos, 3); geo.setAttribute('position', fireAttr);
-      geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-      var mat = new THREE.PointsMaterial({ size: isMobile ? 0.5 : 0.42, map: softSprite(), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true });
-      fireParts = new THREE.Points(geo, mat); scene.add(fireParts);
-    }
-    function reseed(i, pos, col, init) {
-      var x = (Math.random() * 2 - 1) * spanX;
-      var y = 0.2 + Math.random() * 1.6;            // nace en/junto a las letras de AVIVANDO
-      var z = (Math.random() * 2 - 1) * 0.7;
-      var life = Math.random();
-      fireData[i] = { x: x, y0: y, z: z, vy: 1.4 + Math.random() * 2.2, sway: Math.random() * 6.28, life: init ? life : 0, max: 0.7 + Math.random() * 0.8 };
-      pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = z;
-      col[i * 3] = 1; col[i * 3 + 1] = 0.5; col[i * 3 + 2] = 0.1;
-    }
-    function stepParticles(dt) {
-      var pos = fireAttr.array, col = fireParts.geometry.getAttribute('color').array, boost = 0.6 + intensity;
-      for (var i = 0; i < PCOUNT; i++) {
-        var d = fireData[i]; d.life += dt * (0.5 + d.vy * 0.18);
-        if (d.life > d.max) { d.life = 0; d.y0 = 0.2 + Math.random() * 1.4; d.x = (Math.random() * 2 - 1) * spanX; }
-        var f = d.life / d.max;
-        pos[i * 3] = d.x + Math.sin(d.sway + d.life * 3.0) * 0.5 * f;
-        pos[i * 3 + 1] = d.y0 + d.life * d.vy * boost * 1.6;
-        pos[i * 3 + 2] = d.z;
-        // color: naranja → amarillo → se apaga
-        var r = 1, g = 0.35 + f * 0.6, b = 0.05 + f * 0.25, fade = (1 - f);
-        col[i * 3] = r * fade * 1.4; col[i * 3 + 1] = g * fade * 1.2; col[i * 3 + 2] = b * fade;
-      }
-      fireAttr.needsUpdate = true; fireParts.geometry.getAttribute('color').needsUpdate = true;
-    }
-
-    function makeText(font, TextGeometry, text, size, emissive, eInt) {
-      var geo = new TextGeometry(text, { font: font, size: size, height: size * 0.32, curveSegments: 5, bevelEnabled: true, bevelThickness: size * 0.04, bevelSize: size * 0.035, bevelSegments: 2 });
-      geo.computeBoundingBox(); geo.center();
-      var mat = new THREE.MeshStandardMaterial({ color: 0x1c0d05, emissive: new THREE.Color(emissive), emissiveIntensity: eInt, emissiveMap: embTex, bumpMap: embTex, bumpScale: 0.22, roughness: 0.7, metalness: 0.15 });
-      mat.onBeforeCompile = function (sh) {   // rim/fresnel: cantos al rojo vivo
-        sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>',
-          '#include <emissivemap_fragment>\n float afFres = pow(1.0 - clamp(dot(normalize(vViewPosition), normal), 0.0, 1.0), 3.0);\n totalEmissiveRadiance += vec3(1.0, 0.5, 0.12) * afFres * 1.7;');
-      };
-      var mesh = new THREE.Mesh(geo, mat);
-      var w = geo.boundingBox.max.x - geo.boundingBox.min.x;
-      return { mesh: mesh, width: w };
-    }
-
-    async function init(el) {
-      mountEl = el;
-      THREE = await import(CFG.three);
-      var mods = await Promise.all([
-        import(CFG.three + '/examples/jsm/loaders/FontLoader.js'),
-        import(CFG.three + '/examples/jsm/geometries/TextGeometry.js'),
-        import(CFG.three + '/examples/jsm/postprocessing/EffectComposer.js'),
-        import(CFG.three + '/examples/jsm/postprocessing/RenderPass.js'),
-        import(CFG.three + '/examples/jsm/postprocessing/UnrealBloomPass.js'),
-        import(CFG.three + '/examples/jsm/postprocessing/ShaderPass.js')
-      ]);
-      var FontLoader = mods[0].FontLoader, TextGeometry = mods[1].TextGeometry,
-        EffectComposer = mods[2].EffectComposer, RenderPass = mods[3].RenderPass, UnrealBloomPass = mods[4].UnrealBloomPass, ShaderPass = mods[5].ShaderPass;
-
-      W = el.clientWidth || 600; H = el.clientHeight || 270;
-      renderer = new THREE.WebGLRenderer({ alpha: true, antialias: !isMobile });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 2));
-      renderer.setSize(W, H); renderer.setClearColor(0x000000, 0);
-      renderer.outputColorSpace = THREE.SRGBColorSpace;
-      renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
-      el.appendChild(renderer.domElement);
-
-      scene = new THREE.Scene();
-      camera = new THREE.PerspectiveCamera(38, W / H, 0.1, 100); camera.position.set(0, 0, 20);
-      scene.add(new THREE.AmbientLight(0x66331a, 0.7));
-      var key = new THREE.DirectionalLight(0xffaa55, 0.8); key.position.set(0, 6, 8); scene.add(key);
-      firelight = new THREE.PointLight(0xff5a00, 2.2, 40); firelight.position.set(0, -2, 6); scene.add(firelight);
-      var back = new THREE.PointLight(0xff7a30, 1.6, 50); back.position.set(0, 3, -9); scene.add(back);  // contra para rim/volumen
-
-      group = new THREE.Group(); scene.add(group);
-      var font = await new Promise(function (res, rej) { new FontLoader().load(CFG.font, res, undefined, rej); });
-      embTex = emberTex();
-      var a = makeText(font, TextGeometry, CFG.word1, 2.4, 0xff7a18, 1.55);
-      var b = makeText(font, TextGeometry, CFG.word2, 1.7, 0xff6512, 1.45);
-      a.mesh.position.y = 1.7; b.mesh.position.y = -1.9;
-      group.add(a.mesh); group.add(b.mesh);
-      spanX = a.width / 2;
-
-      // aura de fuego cálida detrás de las letras
-      var glowMat = new THREE.SpriteMaterial({ map: softSprite(), color: 0xff5200, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.22 });
-      glowSprite = new THREE.Sprite(glowMat); glowSprite.scale.set(a.width * 1.5, 9, 1); glowSprite.position.set(0, 0.6, -3); scene.add(glowSprite);
-
-      // encuadre: ajustar cámara para que AVIVANDO entre con margen
-      var fitW = Math.max(a.width, 12) * 1.18;
-      camera.position.z = (fitW / 2) / Math.tan((camera.fov * Math.PI / 180) / 2) / camera.aspect;
-
-      buildParticles();
-
-      if (!isMobile) {   // BLOOM real con transparencia (doble composer)
-        var bloomPass = new UnrealBloomPass(new THREE.Vector2(W, H), 0.55, 0.6, 0.5);
-        bloomComposer = new EffectComposer(renderer); bloomComposer.renderToScreen = false;
-        bloomComposer.addPass(new RenderPass(scene, camera)); bloomComposer.addPass(bloomPass);
-        var mix = new ShaderPass(new THREE.ShaderMaterial({
-          uniforms: { baseTexture: { value: null }, bloomTexture: { value: bloomComposer.renderTarget2.texture } },
-          vertexShader: 'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-          fragmentShader: 'uniform sampler2D baseTexture;uniform sampler2D bloomTexture;varying vec2 vUv;void main(){vec4 b=texture2D(baseTexture,vUv);vec4 g=texture2D(bloomTexture,vUv);float ga=max(max(g.r,g.g),g.b);gl_FragColor=vec4(b.rgb+g.rgb,clamp(b.a+ga,0.0,1.0));}',
-          transparent: true
-        }), 'baseTexture');
-        mix.needsSwap = true;
-        finalComposer = new EffectComposer(renderer);
-        finalComposer.addPass(new RenderPass(scene, camera)); finalComposer.addPass(mix);
-      }
-
-      window.addEventListener('resize', onResize, { passive: true });
-      ready = true;
+      window.addEventListener('pointermove', function (e) { feed(e.clientX, e.clientY); }, { passive: true });
+      window.addEventListener('touchmove', function (e) { var t0 = e.touches[0]; if (t0) feed(t0.clientX, t0.clientY); }, { passive: true });
       return true;
     }
-
-    function onResize() {
-      if (!renderer || !mountEl) return;
-      W = mountEl.clientWidth || W; H = mountEl.clientHeight || H;
-      renderer.setSize(W, H);
-      if (bloomComposer) { bloomComposer.setSize(W, H); finalComposer.setSize(W, H); }
-      camera.aspect = W / H; camera.updateProjectionMatrix();
+    function resize() {
+      if (!canvas) return;
+      var dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 1.75);
+      var w = canvas.clientWidth || 700, h = canvas.clientHeight || 350;
+      canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      if (uAspect) { gl.useProgram(prog); gl.uniform1f(uAspect, w / h); }
     }
-
-    var frameMin = 1000 / (isMobile ? 20 : 30), lastDraw = 0;
     function frame(now) {
       if (!running) return;
-      raf = requestAnimationFrame(frame);
-      if (now - lastDraw < frameMin) return;                 // límite de FPS → el audio nunca compite
-      var dt = lastDraw ? Math.min((now - lastDraw) / 1000, 0.06) : 0.033; lastDraw = now;
-      intensity += (target - intensity) * 0.1;
-      var t = now / 1000;
-      stepParticles(dt);
-      group.rotation.y = Math.sin(t * 0.3) * 0.14;          // parallax sutil
-      group.position.y = Math.sin(t * 0.6) * 0.06;
-      if (embTex) { embTex.offset.y -= dt * 0.018; embTex.offset.x += dt * 0.005; }   // lava que fluye
-      if (glowSprite) glowSprite.material.opacity = 0.18 + Math.sin(t * 4.0) * 0.06 + intensity * 0.12;
-      firelight.intensity = 1.8 + Math.sin(t * 9.0) * 0.5 + intensity;   // parpadeo de fuego
-      if (bloomComposer) { renderer.setClearColor(0x000000, 0); bloomComposer.render(); finalComposer.render(); }
-      else renderer.render(scene, camera);
+      if (FORCE) raf = setTimeout(function () { frame(performance.now()); }, 50);
+      else raf = requestAnimationFrame(frame);
+      if (!FORCE && now - lastDraw < frameMin) return;
+      lastDraw = now;
+      if (!born) born = now;
+      var t = (now - born) / 1000;
+      boost += (boostT - boost) * 0.06;
+      // soplo fantasma: el fuego respira solo si nadie toca (y en móvil)
+      if (now - lastMove > 2200) {
+        trail.unshift({ x: 0.5 + 0.38 * Math.sin(t * 0.5), y: 0.62 + 0.18 * Math.sin(t * 0.33 + 1.7), s: 0.6 });
+        if (trail.length > N) trail.length = N;
+      }
+      for (var i = 0; i < N; i++) {
+        var p = trail[i];
+        if (p) { p.s *= 0.945; flat[i * 3] = p.x; flat[i * 3 + 1] = p.y; flat[i * 3 + 2] = p.s; }
+        else { flat[i * 3 + 2] = 0; }
+      }
+      gl.uniform1f(uTime, t);
+      gl.uniform1f(uBoost, boost);
+      gl.uniform3fv(uTrail, flat);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
-    function play() { if (running || !ready) return; running = true; tPrev = 0; raf = requestAnimationFrame(frame); }
-    function pause() { running = false; if (raf) cancelAnimationFrame(raf); raf = 0; }
-
+    function play() { if (running || !gl) return; running = true; lastDraw = 0; if (FORCE) raf = setTimeout(function () { frame(performance.now()); }, 30); else raf = requestAnimationFrame(frame); }
+    function pause() { if (FORCE) return; running = false; if (raf) { cancelAnimationFrame(raf); clearTimeout(raf); } raf = 0; }
+    function still() { if (!gl) return; gl.uniform1f(uTime, 6.0); gl.uniform1f(uBoost, 0.9); flat[0] = 0.5; flat[1] = 0.6; flat[2] = 0.9; gl.uniform3fv(uTrail, flat); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); }
     return {
       mount: function (el) {
-        init(el).then(function () { if (reduceMotion) renderer.render(scene, camera); else play(); })
-          .catch(function (e) { console.warn('[af] 3D fallo, respaldo texto', e); el.classList.add('af-firetext-fallback'); el.innerHTML = '<span>' + CFG.word1 + '</span><span>' + CFG.word2 + '</span>'; });
+        var ok = false;
+        var go = function () { if (ok) return; ok = true; if (!init(el)) { el.classList.add('af-firetext-fallback'); el.innerHTML = '<span>' + CFG.word1 + '</span><span>' + CFG.word2 + '</span>'; return; } if (reduceMotion) still(); else play(); };
+        if (document.fonts && document.fonts.load) {
+          document.fonts.load('400 200px Anton').then(go, go);
+          setTimeout(go, 2500);
+        } else go();
       },
       play: function () { if (!reduceMotion) play(); },
       pause: pause,
-      setIntensity: function (v) { target = 0.3 + Math.max(0, Math.min(1, v)) * 0.9; },
-      ok: function () { return ready; }
+      setIntensity: function (v) { boostT = 0.55 + Math.max(0, Math.min(1, v)) * 0.75; }
     };
   })();
 
   /* ======================================================================
-     VISUALIZADOR audio-reactivo (con respaldo sintético seguro)
+     VISUALIZADOR sintético (jamás toca el audio) — igual que v8
      ====================================================================== */
   var Viz = (function () {
-    var BARS = 28, bars = [], wrap, raf = 0, running = false, analyser = null, data = null, ctx = null, synthT = 0;
+    var BARS = 28, bars = [], wrap, raf = 0, running = false, synthT = 0;
     function build(mount) { wrap = document.createElement('div'); wrap.id = 'af-viz'; for (var i = 0; i < BARS; i++) { var b = document.createElement('span'); b.className = 'af-viz-bar'; wrap.appendChild(b); bars.push(b); } mount.appendChild(wrap); }
-    // Visualizador SINTÉTICO: nunca tocamos el elemento <audio> ni el Web Audio API.
-    // (Enganchar el audio podía suspenderse en segundo plano y CORTAR la radio.)
-    function tryAudio() { return false; }
     function tick() {
-      if (!running) return; var sum = 0, i;
-      if (analyser) { analyser.getByteFrequencyData(data); for (i = 0; i < BARS; i++) { var v = (data[i % data.length] || 0) / 255; bars[i].style.transform = 'scaleY(' + (0.12 + v * 0.95).toFixed(3) + ')'; sum += v; } if (sum < 0.02) analyser = null; }
-      else { synthT += 0.06; for (i = 0; i < BARS; i++) { var s = 0.45 + 0.4 * Math.sin(synthT + i * 0.5) * Math.sin(synthT * 0.7 + i); s = 0.15 + Math.abs(s) * 0.85; bars[i].style.transform = 'scaleY(' + s.toFixed(3) + ')'; sum += s; } }
-      FireText.setIntensity(sum / BARS); raf = requestAnimationFrame(tick);
+      if (!running) return; var sum = 0;
+      synthT += 0.06;
+      for (var i = 0; i < BARS; i++) { var s = 0.45 + 0.4 * Math.sin(synthT + i * 0.5) * Math.sin(synthT * 0.7 + i); s = 0.15 + Math.abs(s) * 0.85; bars[i].style.transform = 'scaleY(' + s.toFixed(3) + ')'; sum += s; }
+      FireText.setIntensity(sum / BARS);
+      if (FORCE) raf = setTimeout(tick, 90); else raf = requestAnimationFrame(tick);
     }
-    return { mount: function (el) { build(el); }, play: function () { if (running) return; running = true; tryAudio(); raf = requestAnimationFrame(tick); }, pause: function () { running = false; if (raf) cancelAnimationFrame(raf); raf = 0; }, hookPlay: function () { tryAudio(); } };
+    return { mount: function (el) { build(el); }, play: function () { if (running) return; running = true; tick(); }, pause: function () { if (FORCE) return; running = false; if (raf) { cancelAnimationFrame(raf); clearTimeout(raf); } raf = 0; } };
   })();
 
   /* ======================================================================
-     DOM
+     DOM — idéntico al v8 (la página que te gusta)
      ====================================================================== */
   function el(html) { var d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
 
@@ -332,7 +305,6 @@
       if (tab) { document.querySelectorAll('.af-tab').forEach(function (t) { t.classList.remove('active'); }); document.querySelectorAll('.af-pane').forEach(function (p) { p.classList.remove('active'); }); e.target.classList.add('active'); var pn = document.querySelector('.af-pane[data-pane="' + tab + '"]'); if (pn) pn.classList.add('active'); }
     });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeOverlay('af-np'); closeOverlay('af-inst'); } });
-    document.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('button')) setTimeout(function () { Viz.hookPlay(); }, 400); }, true);
   }
 
   document.addEventListener('visibilitychange', function () { if (document.hidden) { FireText.pause(); Viz.pause(); } else { FireText.play(); if (!reduceMotion) Viz.play(); } });
