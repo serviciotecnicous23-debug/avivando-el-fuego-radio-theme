@@ -232,6 +232,9 @@ a:hover { color: var(--af-gold); }
   pointer-events: none;
 }
 @keyframes af13-chip { 0%,100% { opacity: .55; } 50% { opacity: .95; } }
+/* en las páginas de cuenta la tarjeta es el formulario, no el reproductor */
+html.af-account .public-page .card::before,
+.public-page .card:has(input[type="password"])::before { content: none; display: none; }
 
 /* el play es el foco: halo que late invitando a presionar */
 .radio-control-play-button { position: relative !important; }

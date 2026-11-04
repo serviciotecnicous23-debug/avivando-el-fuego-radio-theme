@@ -30,6 +30,10 @@
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || /[?&]afmobile=1/.test(location.search);
   var FORCE = /[?&]afforce=1/.test(location.search);   // solo dev
+  // Páginas de cuenta (entrar, recuperar clave, instalación): sin encabezado de fuego,
+  // visualizador ni botón de instalar, para que el formulario quede a la vista.
+  var ACCOUNT_PAGE = /^\/(login|forgot|recover|setup|register)(\/|$)/.test(location.pathname);
+  if (ACCOUNT_PAGE) document.documentElement.classList.add('af-account');
 
   (function () { var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = CFG.fontHref; document.head.appendChild(l); })();
 
@@ -272,7 +276,7 @@
   function detectPlatform() { var u = navigator.userAgent; if (/iPhone|iPad|iPod/i.test(u)) return 'ios'; if (/Android/i.test(u)) return 'android'; return 'desktop'; }
 
   function inject() {
-    if (document.getElementById('af-hero')) return;
+    if (ACCOUNT_PAGE || document.getElementById('af-hero')) return;
     var target = document.querySelector('main') || document.querySelector('.public-page') || document.body;
     target.insertAdjacentElement('afterbegin', el(HERO_HTML));
     document.body.appendChild(el(MODAL_NP)); document.body.appendChild(el(MODAL_INSTALL)); document.body.appendChild(el(INSTALL_FAB));
@@ -308,7 +312,7 @@
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeOverlay('af-np'); closeOverlay('af-inst'); } });
   }
 
-  document.addEventListener('visibilitychange', function () { if (document.hidden) { FireText.pause(); Viz.pause(); } else { FireText.play(); if (!reduceMotion) Viz.play(); } });
+  document.addEventListener('visibilitychange', function () { if (ACCOUNT_PAGE) return; if (document.hidden) { FireText.pause(); Viz.pause(); } else { FireText.play(); if (!reduceMotion) Viz.play(); } });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', inject); else inject();
 })();
