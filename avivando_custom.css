@@ -394,3 +394,23 @@ html.af-standalone #af-cta-install { display: none !important; }
   #af-cta-install.ready { animation: none; }
   #af-toast { transition: none; }
 }
+
+/* en el teléfono: la radio usa el ancho de la pantalla (antes 93 px de márgenes
+   sumados) y los tres botones de arriba son "acciones rápidas" (ícono y palabra) */
+@media (max-width: 600px) {
+  main { padding-left: 6px !important; padding-right: 6px !important; }
+  .public-page .card { margin-left: 0 !important; margin-right: 0 !important; }
+  #af-hero { padding-left: 8px; padding-right: 8px; }
+  #af-hero-actions { flex-wrap: nowrap; width: 100%; max-width: 360px; gap: 8px; }
+  #af-hero-actions > a, #af-hero-actions > button {
+    flex: 1 1 0; min-width: 0; flex-direction: column; justify-content: center; gap: 5px;
+    min-height: 60px; padding: 6px 4px !important; border-radius: 16px !important;
+    font-size: 10.5px !important; letter-spacing: .6px !important;
+  }
+  #af-hero-actions svg { width: 20px; height: 20px; }
+  /* dentro de la web solo queda "Compartir": como píldora, centrado */
+  html.af-embedded #af-hero-actions { justify-content: center; }
+  html.af-embedded #af-hero-actions > * {
+    flex: 0 0 auto; flex-direction: row; min-height: 44px; padding: 0 18px !important; border-radius: 999px !important;
+  }
+}
