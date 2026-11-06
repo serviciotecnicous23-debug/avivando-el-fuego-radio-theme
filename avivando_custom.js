@@ -34,6 +34,11 @@
   // visualizador ni botón de instalar, para que el formulario quede a la vista.
   var ACCOUNT_PAGE = /^\/(login|forgot|recover|setup|register)(\/|$)/.test(location.pathname);
   if (ACCOUNT_PAGE) document.documentElement.classList.add('af-account');
+  // Dentro de la web del ministerio (iframe en ministerioavivandoelfuego.com/radio):
+  // la web ya pone su menú y su propia instalación, así que aquí sobran "Sitio del
+  // Ministerio" y los botones de instalar (instalar tampoco funciona dentro de un iframe).
+  var EMBEDDED = (function () { try { return window.self !== window.top; } catch (e) { return true; } })();
+  if (EMBEDDED) document.documentElement.classList.add('af-embedded');
 
   (function () { var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = CFG.fontHref; document.head.appendChild(l); })();
 

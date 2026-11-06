@@ -279,3 +279,8 @@ img.album_art, .album-art img {
   .public-page .card::before, .radio-control-play-button::after,
   img.album_art, .album-art img { animation: none; }
 }
+
+/* Dentro de la web del ministerio (iframe): sin "Sitio del Ministerio" ni instalar */
+html.af-embedded #af-hero-actions,
+html.af-embedded #af-install-btn,
+html.af-embedded #af-inst { display: none !important; }
