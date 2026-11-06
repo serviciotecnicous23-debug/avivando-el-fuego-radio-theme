@@ -440,9 +440,12 @@
     var mo = new MutationObserver(function () { if (pending) return; pending = true; setTimeout(function () { pending = false; relabelStreams(); ensureExtras(); }, 60); });
     mo.observe(document.querySelector('.public-page') || document.body, { childList: true, subtree: true, characterData: true });
     setInterval(fetchNext, 30000);
+    // Con la pantalla apagada el navegador puede frenar los relojes: al volver, si ya pasó
+    // la hora del temporizador, la radio se apaga enseguida.
+    window.addEventListener('pageshow', tickTimer); window.addEventListener('focus', tickTimer);
   }
 
-  document.addEventListener('visibilitychange', function () { if (ACCOUNT_PAGE) return; if (document.hidden) { FireText.pause(); Viz.pause(); } else { FireText.play(); if (!reduceMotion) Viz.play(); fetchNext(); } });
+  document.addEventListener('visibilitychange', function () { if (ACCOUNT_PAGE) return; if (document.hidden) { FireText.pause(); Viz.pause(); } else { FireText.play(); if (!reduceMotion) Viz.play(); fetchNext(); tickTimer(); } });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', inject); else inject();
 })();
