@@ -1,5 +1,7 @@
 /* ============================================================================
-   AVIVANDO EL FUEGO — Tema AzuraCast (público) · v14
+   AVIVANDO EL FUEGO — Tema AzuraCast (público) · v15
+   v15 · el botón "Ministerio" lleva a la bienvenida del ministerio
+   (/bienvenida?desde=radio): quién está detrás de la radio y el primer paso.
    v14 · la radio como app: play grande, calidad con nombres claros,
    "A continuación", temporizador para dormir, compartir, un solo
    "Instalar app" y barra del teléfono morada.
@@ -18,7 +20,8 @@
   window.__afThemeV14 = true;
 
   var CFG = {
-    ministryUrl: 'https://ministerioavivandoelfuego.com/',
+    // El botón "Ministerio" abre la bienvenida, que reconoce la llegada desde la radio.
+    ministryUrl: 'https://ministerioavivandoelfuego.com/bienvenida?desde=radio',
     // Para compartir: la radio dentro de la web del ministerio (dirección corta y conocida).
     shareUrl: 'https://ministerioavivandoelfuego.com/radio',
     shortcode: 'avivando_el_fuego',
