@@ -280,7 +280,117 @@ img.album_art, .album-art img {
   img.album_art, .album-art img { animation: none; }
 }
 
-/* Dentro de la web del ministerio (iframe): sin "Sitio del Ministerio" ni instalar */
-html.af-embedded #af-hero-actions,
-html.af-embedded #af-install-btn,
-html.af-embedded #af-inst { display: none !important; }
+/* ============================================================================
+   v14 · La radio como app (teléfono primero)
+   ========================================================================== */
+/* Dentro de la web del ministerio (iframe): la web ya pone menú e instalación;
+   queda "Compartir". Abierta como app instalada, no se ofrece instalarla otra vez. */
+html.af-embedded #af-cta-ministry,
+html.af-embedded #af-cta-install,
+html.af-embedded #af-inst,
+html.af-standalone #af-cta-install { display: none !important; }
+
+/* botones del encabezado con ícono, del alto de un dedo */
+#af-hero-actions { gap: 8px; }
+#af-cta-ministry, #af-cta-install, #af-cta-share {
+  display: inline-flex !important; align-items: center; gap: 7px; min-height: 44px; padding: 0 16px !important;
+}
+#af-cta-share {
+  font-family: var(--af-font); font-size: 12.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  border-radius: 999px; cursor: pointer; background: rgba(255,107,0,.1); color: var(--af-gold-light);
+  border: 1px solid rgba(255,107,0,.4); transition: transform .18s ease, box-shadow .18s ease;
+}
+#af-cta-share:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(255,90,0,.5); }
+#af-hero-actions svg { width: 16px; height: 16px; flex: none; }
+#af-cta-install.ready { animation: af-fab 2.6s ease-in-out infinite; }
+
+/* "AHORA SUENA" encima del nombre (antes lo tapaba en el teléfono) */
+.public-page .card::before { position: static; display: inline-block; margin: 16px 0 -2px 20px; }
+
+/* controles: play grande (la acción principal), calidad y volumen a la medida del dedo */
+.radio-controls { display: flex !important; flex-wrap: wrap; align-items: center; gap: 12px; }
+.radio-control-play-button {
+  width: 60px !important; height: 60px !important; min-width: 60px; flex: none;
+  display: inline-grid !important; place-items: center; padding: 0 !important;
+}
+.radio-control-play-button svg { width: 28px !important; height: 28px !important; }
+.radio-control-select-stream { flex: 1 1 150px; min-width: 0; }
+.radio-control-volume { flex: 1 1 100%; }
+.radio-control-volume button, .radio-control-volume .btn { min-width: 40px; min-height: 40px; }
+.form-range { height: 28px !important; }
+
+/* selector de calidad: antes un botón gris con "/RADIO.MP3 (192KBPS MP3)" */
+.radio-control-select-stream .dropdown-toggle {
+  width: 100%; display: inline-flex !important; align-items: center; justify-content: space-between; gap: 8px;
+  min-height: 40px; padding: 8px 14px !important; white-space: normal; text-align: left;
+  font-size: 12.5px !important; font-weight: 700; letter-spacing: .3px; text-transform: none !important;
+  color: var(--af-gold-light) !important; background: rgba(255,107,0,.1) !important;
+  border: 1px solid rgba(255,107,0,.4) !important; border-radius: 999px !important; box-shadow: none !important;
+}
+.dropdown-menu {
+  background: linear-gradient(150deg, rgba(45,17,71,.98), rgba(18,6,34,.98)) !important;
+  border: 1px solid rgba(255,107,0,.4) !important; border-radius: 16px !important; padding: 6px !important;
+  box-shadow: 0 18px 40px rgba(0,0,0,.5) !important;
+}
+.dropdown-item { color: var(--af-ink) !important; border-radius: 10px; padding: 10px 12px !important; font-size: 13px; }
+.dropdown-item:hover, .dropdown-item:focus, .dropdown-item.active {
+  background: rgba(255,107,0,.18) !important; color: #fff !important;
+}
+
+/* ventanas de AzuraCast (historial, lista) con el mismo morado y fuego */
+.modal-content {
+  background: linear-gradient(150deg, rgba(45,17,71,.98), rgba(18,6,34,.98)) !important;
+  border: 1px solid rgba(255,107,0,.45) !important; border-radius: 22px !important;
+  color: var(--af-ink) !important; box-shadow: 0 30px 80px rgba(0,0,0,.6) !important;
+}
+.modal-header, .modal-footer { border-color: rgba(255,107,0,.2) !important; }
+.modal-backdrop.show { background: #08020f !important; opacity: .8 !important; }
+
+/* "A continuación" */
+#af-next {
+  display: flex; align-items: baseline; gap: 8px; width: 100%; min-width: 0;
+  margin: 2px 0 12px; padding: 0 4px; font-size: 13px; line-height: 1.4; color: var(--af-muted);
+}
+#af-next[hidden] { display: none !important; }
+#af-next span { flex: none; font-size: 10px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: var(--af-fire-soft); }
+#af-next b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--af-ink); font-weight: 600; }
+
+/* temporizador: chip como los de historial y lista */
+.public-page .card a:not(.album-art) { min-height: 40px; }
+#af-timer-chip {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; margin: 4px;
+  border: 1px solid rgba(255,107,0,.3); border-radius: 999px; padding: 7px 15px; background: rgba(255,107,0,.07);
+  font-family: var(--af-font); font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--af-gold-light); cursor: pointer; transition: background .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+#af-timer-chip svg { width: 15px; height: 15px; }
+#af-timer-chip:hover { background: rgba(255,107,0,.16); border-color: var(--af-fire-mid); color: #fff; }
+#af-timer-chip.on { border-color: var(--af-fire-mid); background: rgba(255,107,0,.2); color: #fff; box-shadow: 0 0 18px rgba(255,107,0,.35); }
+#af-timer h3 { margin: 0 0 6px; font-size: 22px; }
+#af-timer-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0 8px; }
+.af-opt {
+  min-height: 54px; border-radius: 16px; cursor: pointer;
+  border: 1px solid rgba(255,107,0,.35); background: rgba(255,107,0,.1); color: var(--af-gold-light);
+  font-family: var(--af-font); font-size: 15px; font-weight: 700;
+}
+.af-opt:hover, .af-opt:focus-visible { background: linear-gradient(135deg, var(--af-amber), var(--af-fire)); color: #fff; outline: none; }
+#af-timer-cancel { background: none; border: 0; padding: 10px; cursor: pointer; color: var(--af-fire-soft); font: 600 13px var(--af-font); text-decoration: underline; }
+#af-timer-cancel[hidden] { display: none; }
+
+/* avisos cortos */
+#af-toast {
+  position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); z-index: 100000;
+  max-width: calc(100vw - 32px); padding: 11px 18px; border-radius: 999px; text-align: center;
+  font: 600 13px var(--af-font); color: #fff7ed; background: rgba(20,8,34,.95);
+  border: 1px solid rgba(255,107,0,.45); box-shadow: 0 12px 30px rgba(0,0,0,.45);
+  opacity: 0; transform: translate(-50%, 12px); transition: opacity .25s ease, transform .25s ease; pointer-events: none;
+}
+#af-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+#af-cta-ministry:focus-visible, #af-cta-share:focus-visible, #af-cta-install:focus-visible,
+#af-timer-chip:focus-visible, .af-x:focus-visible { outline: 2px solid var(--af-gold); outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  #af-cta-install.ready { animation: none; }
+  #af-toast { transition: none; }
+}
