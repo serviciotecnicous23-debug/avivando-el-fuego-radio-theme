@@ -1,5 +1,8 @@
 /* ============================================================================
-   AVIVANDO EL FUEGO — Tema AzuraCast (público) · v13
+   AVIVANDO EL FUEGO — Tema AzuraCast (público) · v14
+   v14 · la radio como app: play grande, calidad con nombres claros,
+   "A continuación", temporizador para dormir, compartir, un solo
+   "Instalar app" y barra del teléfono morada.
    LA MISMA PÁGINA del v8 (fondo morado, visualizador, botones, reproductor,
    modales) — solo cambian LAS LETRAS del logo: en lugar de la geometría 3D
    de Three.js, tipografía monumental (Anton) pintada en FUEGO por un shader
@@ -11,11 +14,16 @@
    ========================================================================== */
 (function () {
   'use strict';
-  if (window.__afThemeV13) return;
-  window.__afThemeV13 = true;
+  if (window.__afThemeV14) return;
+  window.__afThemeV14 = true;
 
   var CFG = {
     ministryUrl: 'https://ministerioavivandoelfuego.com/',
+    // Para compartir: la radio dentro de la web del ministerio (dirección corta y conocida).
+    shareUrl: 'https://ministerioavivandoelfuego.com/radio',
+    shortcode: 'avivando_el_fuego',
+    themeColor: '#13062a',
+    title: 'Avivando el Fuego Radio · En vivo 24/7',
     station: 'Avivando el Fuego Radio',
     tagline: 'Radio cristiana · Adoración y fuego 24/7',
     word1: 'AVIVANDO', word2: 'EL FUEGO',
@@ -24,7 +32,7 @@
 
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault(); window.__afInstallPrompt = e;
-    var b = document.getElementById('af-install-btn'); if (b) b.classList.add('ready');
+    var b = document.getElementById('af-cta-install'); if (b) b.classList.add('ready');
   });
 
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -39,6 +47,16 @@
   // Ministerio" y los botones de instalar (instalar tampoco funciona dentro de un iframe).
   var EMBEDDED = (function () { try { return window.self !== window.top; } catch (e) { return true; } })();
   if (EMBEDDED) document.documentElement.classList.add('af-embedded');
+  // Abierta como app instalada: no se ofrece instalarla otra vez.
+  var STANDALONE = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+  if (STANDALONE) document.documentElement.classList.add('af-standalone');
+  // Barra del teléfono morada (AzuraCast trae azul) y título sin "AzuraCast".
+  (function () {
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) { meta = document.createElement('meta'); meta.name = 'theme-color'; document.head.appendChild(meta); }
+    meta.content = CFG.themeColor;
+    if (!ACCOUNT_PAGE) document.title = CFG.title;
+  })();
 
   (function () { var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = CFG.fontHref; document.head.appendChild(l); })();
 
@@ -242,6 +260,11 @@
      ====================================================================== */
   function el(html) { var d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
 
+  var ICON_FLAME = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2c1 3 4 5.5 4 9.5a4 4 0 0 1-8 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-5 0-8z"/></svg>';
+  var ICON_SHARE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>';
+  var ICON_DOWNLOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12"/><path d="M8 12l4 4 4-4"/><path d="M5 20h14"/></svg>';
+  var ICON_MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+
   var HERO_HTML =
     '<header id="af-hero">' +
       '<span id="af-live"><i></i>EN VIVO · 24/7</span>' +
@@ -249,8 +272,9 @@
       '<p id="af-tagline">' + CFG.tagline + '</p>' +
       '<div id="af-viz-mount"></div>' +
       '<div id="af-hero-actions">' +
-        '<a id="af-cta-ministry" href="' + CFG.ministryUrl + '" target="_blank" rel="noopener">Sitio del Ministerio</a>' +
-        '<button id="af-cta-install" type="button">Instalar app</button>' +
+        '<a id="af-cta-ministry" href="' + CFG.ministryUrl + '" target="_blank" rel="noopener">' + ICON_FLAME + '<span>Ministerio</span></a>' +
+        '<button id="af-cta-share" type="button">' + ICON_SHARE + '<span>Compartir</span></button>' +
+        '<button id="af-cta-install" type="button">' + ICON_DOWNLOAD + '<span>Instalar app</span></button>' +
       '</div>' +
     '</header>';
 
@@ -273,10 +297,20 @@
       '<div class="af-pane" data-pane="desktop"><ol><li>Mira la <strong>barra de direcciones</strong>.</li><li>Icono <strong>Instalar</strong> (monitor con flecha).</li><li>O menú <strong>⋮ → Instalar</strong>.</li><li>Confirma.</li></ol></div>' +
     '</div></div>';
 
-  var INSTALL_FAB =
-    '<button id="af-install-btn" type="button" aria-label="Instalar app">' +
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12"/><path d="M8 12l4 4 4-4"/><path d="M5 20h14"/></svg>' +
-      '<span>Instalar app</span></button>';
+  // Temporizador para dormir (v14).
+  var MODAL_TIMER =
+    '<div id="af-timer" class="af-overlay"><div class="af-sheet"><button class="af-x" data-close="af-timer" aria-label="Cerrar">&times;</button>' +
+      '<h3>Apagar la radio en…</h3><p class="af-muted">Para dormirte escuchando: la radio se apaga sola.</p>' +
+      '<div id="af-timer-opts">' +
+        '<button class="af-opt" type="button" data-min="15">15 min</button>' +
+        '<button class="af-opt" type="button" data-min="30">30 min</button>' +
+        '<button class="af-opt" type="button" data-min="60">1 hora</button>' +
+        '<button class="af-opt" type="button" data-min="90">1 h 30</button>' +
+      '</div>' +
+      '<button id="af-timer-cancel" type="button" hidden>Quitar el temporizador</button>' +
+    '</div></div>';
+
+  var TOAST_HTML = '<div id="af-toast" role="status" aria-live="polite"></div>';
 
   function detectPlatform() { var u = navigator.userAgent; if (/iPhone|iPad|iPod/i.test(u)) return 'ios'; if (/Android/i.test(u)) return 'android'; return 'desktop'; }
 
@@ -284,13 +318,13 @@
     if (ACCOUNT_PAGE || document.getElementById('af-hero')) return;
     var target = document.querySelector('main') || document.querySelector('.public-page') || document.body;
     target.insertAdjacentElement('afterbegin', el(HERO_HTML));
-    document.body.appendChild(el(MODAL_NP)); document.body.appendChild(el(MODAL_INSTALL)); document.body.appendChild(el(INSTALL_FAB));
+    document.body.appendChild(el(MODAL_NP)); document.body.appendChild(el(MODAL_INSTALL)); document.body.appendChild(el(MODAL_TIMER)); document.body.appendChild(el(TOAST_HTML));
     FireText.mount(document.getElementById('af-firetext'));
     Viz.mount(document.getElementById('af-viz-mount')); if (!reduceMotion) Viz.play();
     var p = detectPlatform();
     var dt = document.querySelector('.af-tab[data-tab="' + p + '"]'); var dp = document.querySelector('.af-pane[data-pane="' + p + '"]');
     if (dt) dt.classList.add('active'); if (dp) dp.classList.add('active');
-    bind(); setupMediaSession();
+    bind(); setupMediaSession(); setupExtras();
   }
 
   function readNP() { function txt(s) { var n = document.querySelector(s); return n ? (n.innerText || '').trim() : ''; } var img = document.querySelector('img.album_art'); return { title: txt('.now-playing-title'), artist: txt('.now-playing-artist'), art: img ? img.src : '' }; }
@@ -308,16 +342,110 @@
   function bind() {
     document.addEventListener('click', function (e) {
       var art = e.target.closest && e.target.closest('a.album-art'); if (art) { e.preventDefault(); openOverlay('af-np'); return; }
-      if (e.target.closest && (e.target.closest('#af-install-btn') || e.target.closest('#af-cta-install'))) { e.preventDefault(); openInstall(); return; }
+      if (e.target.closest && e.target.closest('#af-cta-install')) { e.preventDefault(); openInstall(); return; }
+      if (e.target.closest && e.target.closest('#af-cta-share')) { e.preventDefault(); share(); return; }
+      if (e.target.closest && e.target.closest('#af-timer-chip')) { e.preventDefault(); var cancel = document.getElementById('af-timer-cancel'); if (cancel) cancel.hidden = !Timer.end; openOverlay('af-timer'); return; }
+      var opt = e.target.closest && e.target.closest('.af-opt'); if (opt) { setTimer(parseInt(opt.getAttribute('data-min'), 10)); return; }
+      if (e.target.closest && e.target.closest('#af-timer-cancel')) { cancelTimer(false); return; }
       var c = e.target.getAttribute && e.target.getAttribute('data-close'); if (c) { closeOverlay(c); return; }
       if (e.target.classList && e.target.classList.contains('af-overlay')) { closeOverlay(e.target.id); return; }
       var tab = e.target.getAttribute && e.target.getAttribute('data-tab');
       if (tab) { document.querySelectorAll('.af-tab').forEach(function (t) { t.classList.remove('active'); }); document.querySelectorAll('.af-pane').forEach(function (p) { p.classList.remove('active'); }); e.target.classList.add('active'); var pn = document.querySelector('.af-pane[data-pane="' + tab + '"]'); if (pn) pn.classList.add('active'); }
     });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeOverlay('af-np'); closeOverlay('af-inst'); } });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeOverlay('af-np'); closeOverlay('af-inst'); closeOverlay('af-timer'); } });
   }
 
-  document.addEventListener('visibilitychange', function () { if (ACCOUNT_PAGE) return; if (document.hidden) { FireText.pause(); Viz.pause(); } else { FireText.play(); if (!reduceMotion) Viz.play(); } });
+  /* ======================================================================
+     v14 · EXTRAS DE APP: calidad con nombres claros, "A continuación",
+     temporizador para dormir, compartir y avisos.
+     ====================================================================== */
+  // Los puntos de montaje se llaman "/radio.mp3 (192kbps MP3)": se muestran con palabras.
+  var LABELS = [
+    [/ligero|ahorra|\.aac|64\s?kbps/i, 'Ahorra datos · 64 kbps'],
+    [/radio\.mp3|192\s?kbps/i, 'Calidad normal · 192 kbps']
+  ];
+  function relabelStreams() {
+    var boxes = document.querySelectorAll('.radio-control-select-stream');
+    for (var b = 0; b < boxes.length; b++) {
+      var walker = document.createTreeWalker(boxes[b], NodeFilter.SHOW_TEXT, null), n;
+      while ((n = walker.nextNode())) {
+        var t = (n.nodeValue || '').trim(); if (!t) continue;
+        for (var i = 0; i < LABELS.length; i++) {
+          if (LABELS[i][0].test(t)) { if (t !== LABELS[i][1]) n.nodeValue = LABELS[i][1]; break; }
+        }
+      }
+    }
+  }
+
+  var toastT = 0;
+  function toast(msg) { var t = document.getElementById('af-toast'); if (!t) return; t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove('show'); }, 3400); }
+
+  function copyLink() {
+    var shown = CFG.shareUrl.replace(/^https?:\/\//, '');
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(CFG.shareUrl).then(function () { toast('Enlace copiado: ' + shown); }, function () { toast('Comparte: ' + shown); }); }
+    else toast('Comparte: ' + shown);
+  }
+  function share() {
+    var data = { title: CFG.station, text: 'Escucha ' + CFG.station + ' en vivo, las 24 horas.', url: CFG.shareUrl };
+    if (navigator.share) { navigator.share(data).catch(function (err) { if (!err || err.name !== 'AbortError') copyLink(); }); return; }
+    copyLink();
+  }
+
+  // "A continuación" y el botón del temporizador viven en la zona de abajo de la tarjeta.
+  // AzuraCast (Vue) puede volver a pintarla: se comprueban cada vez que cambia algo.
+  function ensureExtras() {
+    var area = document.querySelector('.public-page .card .card-body.buttons');
+    if (!area) return;
+    if (!document.getElementById('af-next')) {
+      area.insertAdjacentElement('afterbegin', el('<p id="af-next" hidden><span>A continuación</span><b></b></p>'));
+      lastNext = ''; fetchNext();
+    }
+    if (!document.getElementById('af-timer-chip')) {
+      area.appendChild(el('<button id="af-timer-chip" type="button">' + ICON_MOON + '<span>Temporizador</span></button>'));
+      updateTimerChip();
+    }
+  }
+  var lastNext = '';
+  function fetchNext() {
+    if (document.hidden || !window.fetch) return;
+    fetch('/api/nowplaying/' + CFG.shortcode, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+      var s = d && d.playing_next && d.playing_next.song; var box = document.getElementById('af-next'); if (!box) return;
+      var text = s ? (s.title ? s.title + (s.artist ? ' · ' + s.artist : '') : (s.text || '')) : '';
+      if (text && text !== lastNext) { box.querySelector('b').textContent = text; lastNext = text; }
+      box.hidden = !text;
+    }).catch(function () {});
+  }
+
+  // Temporizador para dormir: al cumplirse, pulsa "Detener" del reproductor de AzuraCast.
+  var Timer = { end: 0, iv: 0 };
+  function isPlaying() { var b = document.querySelector('.radio-control-play-button'); if (!b) return false; var l = String(b.getAttribute('aria-label') || b.getAttribute('title') || '').toLowerCase(); return !!l && l.indexOf('reproducir') === -1 && l.indexOf('play') === -1; }
+  function stopRadio() { var b = document.querySelector('.radio-control-play-button'); if (b && isPlaying()) b.click(); }
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function minutesLabel(min) { return min < 60 ? min + ' min' : Math.floor(min / 60) + ' h' + (min % 60 ? ' ' + (min % 60) : ''); }
+  function updateTimerChip() {
+    var chip = document.getElementById('af-timer-chip'); if (!chip) return;
+    var label = chip.querySelector('span'); var left = Timer.end - Date.now();
+    if (!Timer.end || left <= 0) { label.textContent = 'Temporizador'; chip.classList.remove('on'); chip.setAttribute('aria-label', 'Temporizador para apagar la radio'); return; }
+    var m = Math.floor(left / 60000), s = Math.floor((left % 60000) / 1000);
+    label.textContent = 'Se apaga en ' + m + ':' + pad2(s); chip.classList.add('on');
+    chip.setAttribute('aria-label', 'La radio se apaga en ' + (m + 1) + ' minutos. Toca para cambiarlo');
+  }
+  function tickTimer() { if (Timer.end && Date.now() >= Timer.end) { cancelTimer(true); stopRadio(); toast('La radio se apagó. ¡Que descanses!'); return; } updateTimerChip(); }
+  function setTimer(min) { if (!min) return; Timer.end = Date.now() + min * 60000; clearInterval(Timer.iv); Timer.iv = setInterval(tickTimer, 1000); updateTimerChip(); closeOverlay('af-timer'); toast('La radio se apagará en ' + minutesLabel(min) + '.'); }
+  function cancelTimer(silent) { Timer.end = 0; clearInterval(Timer.iv); Timer.iv = 0; updateTimerChip(); if (!silent) { closeOverlay('af-timer'); toast('Temporizador quitado.'); } }
+
+  function setupExtras() {
+    relabelStreams(); ensureExtras();
+    var pending = false;
+    var mo = new MutationObserver(function () { if (pending) return; pending = true; setTimeout(function () { pending = false; relabelStreams(); ensureExtras(); }, 60); });
+    mo.observe(document.querySelector('.public-page') || document.body, { childList: true, subtree: true, characterData: true });
+    setInterval(fetchNext, 30000);
+    // Con la pantalla apagada el navegador puede frenar los relojes: al volver, si ya pasó
+    // la hora del temporizador, la radio se apaga enseguida.
+    window.addEventListener('pageshow', tickTimer); window.addEventListener('focus', tickTimer);
+  }
+
+  document.addEventListener('visibilitychange', function () { if (ACCOUNT_PAGE) return; if (document.hidden) { FireText.pause(); Viz.pause(); } else { FireText.play(); if (!reduceMotion) Viz.play(); fetchNext(); tickTimer(); } });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', inject); else inject();
 })();
