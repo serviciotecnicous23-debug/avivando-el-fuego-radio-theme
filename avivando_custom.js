@@ -1,5 +1,8 @@
 /* ============================================================================
-   AVIVANDO EL FUEGO — Tema AzuraCast (público) · v15
+   AVIVANDO EL FUEGO — Tema AzuraCast (público) · v16
+   v16 · "Compartir" manda el enlace propio de la radio
+   (radio.ministerioavivandoelfuego.com), no el del ministerio: la radio es una casa
+   aparte que lleva al ministerio, no una página del ministerio.
    v15 · el botón "Ministerio" lleva a la bienvenida del ministerio
    (/bienvenida?desde=radio): quién está detrás de la radio y el primer paso.
    v14 · la radio como app: play grande, calidad con nombres claros,
@@ -22,8 +25,8 @@
   var CFG = {
     // El botón "Ministerio" abre la bienvenida, que reconoce la llegada desde la radio.
     ministryUrl: 'https://ministerioavivandoelfuego.com/bienvenida?desde=radio',
-    // Para compartir: la radio dentro de la web del ministerio (dirección corta y conocida).
-    shareUrl: 'https://ministerioavivandoelfuego.com/radio',
+    // Para compartir: el enlace oficial y propio de la radio (abre esta misma página).
+    shareUrl: 'https://radio.ministerioavivandoelfuego.com',
     shortcode: 'avivando_el_fuego',
     themeColor: '#13062a',
     title: 'Avivando el Fuego Radio · En vivo 24/7',
