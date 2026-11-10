@@ -1,5 +1,8 @@
 /* ============================================================================
-   AVIVANDO EL FUEGO — Tema AzuraCast (público) · v16
+   AVIVANDO EL FUEGO — Tema AzuraCast (público) · v17
+   v17 · botón "Juegos": los juegos del ministerio se abren DENTRO de la radio
+   (un panel con la web en un marco), con la misma cuenta de la web y la radio
+   sonando; desde el panel se pausa o se sigue la radio. "Atrás" lo cierra.
    v16 · "Compartir" manda el enlace propio de la radio
    (radio.ministerioavivandoelfuego.com), no el del ministerio: la radio es una casa
    aparte que lleva al ministerio, no una página del ministerio.
@@ -27,6 +30,8 @@
     ministryUrl: 'https://ministerioavivandoelfuego.com/bienvenida?desde=radio',
     // Para compartir: el enlace oficial y propio de la radio (abre esta misma página).
     shareUrl: 'https://radio.ministerioavivandoelfuego.com',
+    // Los juegos del ministerio, dentro de la radio (la web reconoce ?incrustado=radio).
+    gamesUrl: 'https://ministerioavivandoelfuego.com/juegos?incrustado=radio',
     shortcode: 'avivando_el_fuego',
     themeColor: '#13062a',
     title: 'Avivando el Fuego Radio · En vivo 24/7',
@@ -35,6 +40,8 @@
     word1: 'AVIVANDO', word2: 'EL FUEGO',
     fontHref: 'https://fonts.googleapis.com/css2?family=Anton&display=swap'
   };
+  // Solo en el banco de pruebas (dev/preview.html en localhost): los juegos de la web local.
+  if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) CFG.gamesUrl = 'http://localhost:5073/juegos?incrustado=radio';
 
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault(); window.__afInstallPrompt = e;
@@ -269,6 +276,7 @@
   var ICON_FLAME = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2c1 3 4 5.5 4 9.5a4 4 0 0 1-8 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-5 0-8z"/></svg>';
   var ICON_SHARE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>';
   var ICON_DOWNLOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12"/><path d="M8 12l4 4 4-4"/><path d="M5 20h14"/></svg>';
+  var ICON_GAMES = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 11v3M5.5 12.5h3"/><circle cx="15.5" cy="11.5" r="1"/><circle cx="18" cy="13.5" r="1"/></svg>';
   var ICON_MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
 
   var HERO_HTML =
@@ -278,6 +286,7 @@
       '<p id="af-tagline">' + CFG.tagline + '</p>' +
       '<div id="af-viz-mount"></div>' +
       '<div id="af-hero-actions">' +
+        '<button id="af-cta-games" type="button">' + ICON_GAMES + '<span>Juegos</span></button>' +
         '<a id="af-cta-ministry" href="' + CFG.ministryUrl + '" target="_blank" rel="noopener">' + ICON_FLAME + '<span>Ministerio</span></a>' +
         '<button id="af-cta-share" type="button">' + ICON_SHARE + '<span>Compartir</span></button>' +
         '<button id="af-cta-install" type="button">' + ICON_DOWNLOAD + '<span>Instalar app</span></button>' +
@@ -318,6 +327,18 @@
 
   var TOAST_HTML = '<div id="af-toast" role="status" aria-live="polite"></div>';
 
+  // v17 · El panel de los juegos (el marco con la web se crea la primera vez que se abre).
+  var GAMES_HTML =
+    '<section id="af-games" role="dialog" aria-modal="true" aria-label="Juegos del ministerio" hidden>' +
+      '<div id="af-games-bar">' +
+        '<button id="af-games-play" type="button" aria-label="Pausar o seguir la radio"><i></i></button>' +
+        '<p id="af-games-np"><span>La radio sigue sonando</span><b></b></p>' +
+        '<a id="af-games-ministry" href="' + CFG.ministryUrl + '" target="_blank" rel="noopener">' + ICON_FLAME + '<span>Ministerio</span></a>' +
+        '<button id="af-games-x" type="button" aria-label="Volver a la radio">&times;</button>' +
+      '</div>' +
+      '<div id="af-games-frame"></div>' +
+    '</section>';
+
   function detectPlatform() { var u = navigator.userAgent; if (/iPhone|iPad|iPod/i.test(u)) return 'ios'; if (/Android/i.test(u)) return 'android'; return 'desktop'; }
 
   function inject() {
@@ -325,6 +346,7 @@
     var target = document.querySelector('main') || document.querySelector('.public-page') || document.body;
     target.insertAdjacentElement('afterbegin', el(HERO_HTML));
     document.body.appendChild(el(MODAL_NP)); document.body.appendChild(el(MODAL_INSTALL)); document.body.appendChild(el(MODAL_TIMER)); document.body.appendChild(el(TOAST_HTML));
+    if (!EMBEDDED) document.body.appendChild(el(GAMES_HTML));
     FireText.mount(document.getElementById('af-firetext'));
     Viz.mount(document.getElementById('af-viz-mount')); if (!reduceMotion) Viz.play();
     var p = detectPlatform();
@@ -350,6 +372,9 @@
       var art = e.target.closest && e.target.closest('a.album-art'); if (art) { e.preventDefault(); openOverlay('af-np'); return; }
       if (e.target.closest && e.target.closest('#af-cta-install')) { e.preventDefault(); openInstall(); return; }
       if (e.target.closest && e.target.closest('#af-cta-share')) { e.preventDefault(); share(); return; }
+      if (e.target.closest && e.target.closest('#af-cta-games')) { e.preventDefault(); Games.open(); return; }
+      if (e.target.closest && e.target.closest('#af-games-x')) { e.preventDefault(); Games.close(true); return; }
+      if (e.target.closest && e.target.closest('#af-games-play')) { e.preventDefault(); var pb = document.querySelector('.radio-control-play-button'); if (pb) pb.click(); setTimeout(Games.sync, 250); return; }
       if (e.target.closest && e.target.closest('#af-timer-chip')) { e.preventDefault(); var cancel = document.getElementById('af-timer-cancel'); if (cancel) cancel.hidden = !Timer.end; openOverlay('af-timer'); return; }
       var opt = e.target.closest && e.target.closest('.af-opt'); if (opt) { setTimer(parseInt(opt.getAttribute('data-min'), 10)); return; }
       if (e.target.closest && e.target.closest('#af-timer-cancel')) { cancelTimer(false); return; }
@@ -360,6 +385,47 @@
     });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeOverlay('af-np'); closeOverlay('af-inst'); closeOverlay('af-timer'); } });
   }
+
+  /* ======================================================================
+     v17 · LOS JUEGOS DENTRO DE LA RADIO
+     La web del ministerio se carga en un marco encima de la página: la radio
+     (el <audio> de AzuraCast) sigue sonando debajo. Como radio.ministerioavivandoelfuego.com
+     y ministerioavivandoelfuego.com son el mismo sitio, la sesión de la web vale
+     dentro del marco: se entra o se crea la cuenta sin salir de la radio.
+     ====================================================================== */
+  var Games = (function () {
+    var panel = null, abierto = false, iv = 0;
+    function sync() {
+      if (!panel) return;
+      var playing = isPlaying(); var b = document.getElementById('af-games-play');
+      if (b) { b.classList.toggle('on', playing); b.setAttribute('aria-label', playing ? 'Pausar la radio' : 'Seguir la radio'); }
+      var d = readNP(); var np = document.getElementById('af-games-np');
+      if (np) { np.querySelector('span').textContent = playing ? 'La radio sigue sonando' : 'La radio está en pausa'; np.querySelector('b').textContent = d.title ? d.title + (d.artist ? ' · ' + d.artist : '') : ''; }
+    }
+    function open() {
+      panel = panel || document.getElementById('af-games'); if (!panel || abierto) return;
+      var box = document.getElementById('af-games-frame');
+      if (!box.firstChild) {
+        var f = document.createElement('iframe');
+        f.src = CFG.gamesUrl; f.title = 'Juegos del ministerio';
+        f.setAttribute('allow', 'fullscreen; autoplay; gamepad; screen-wake-lock; clipboard-write');
+        f.setAttribute('allowfullscreen', '');
+        box.appendChild(f);
+      }
+      panel.hidden = false; abierto = true; document.documentElement.classList.add('af-games-open');
+      // "Atrás" del teléfono cierra el panel en vez de salir de la radio
+      try { history.pushState({ afGames: 1 }, ''); } catch (e) {}
+      sync(); clearInterval(iv); iv = setInterval(sync, 2000);
+    }
+    function close(fromButton) {
+      if (!panel || !abierto) return;
+      panel.hidden = true; abierto = false; document.documentElement.classList.remove('af-games-open');
+      clearInterval(iv); iv = 0;
+      if (fromButton) { try { if (history.state && history.state.afGames) history.back(); } catch (e) {} }
+    }
+    window.addEventListener('popstate', function () { if (abierto) close(false); });
+    return { open: open, close: close, sync: sync };
+  })();
 
   /* ======================================================================
      v14 · EXTRAS DE APP: calidad con nombres claros, "A continuación",
