@@ -1,5 +1,8 @@
 /* ============================================================================
-   AVIVANDO EL FUEGO — Tema AzuraCast (público) · v17
+   AVIVANDO EL FUEGO — Tema AzuraCast (público) · v18
+   v18 · los juegos siempre desde la radio oficial: en otra dirección (la antigua,
+   40.160.2.176.sslip.io) el navegador no guarda la sesión dentro del marco, así que
+   "Juegos" lleva a radio.ministerioavivandoelfuego.com con el panel abierto (#juegos).
    v17 · botón "Juegos": los juegos del ministerio se abren DENTRO de la radio
    (un panel con la web en un marco), con la misma cuenta de la web y la radio
    sonando; desde el panel se pausa o se sigue la radio. "Atrás" lo cierra.
@@ -32,6 +35,10 @@
     shareUrl: 'https://radio.ministerioavivandoelfuego.com',
     // Los juegos del ministerio, dentro de la radio (la web reconoce ?incrustado=radio).
     gamesUrl: 'https://ministerioavivandoelfuego.com/juegos?incrustado=radio',
+    // La radio oficial: es el mismo sitio que la web, así que la sesión vale dentro del marco.
+    // En cualquier otra dirección, "Juegos" lleva aquí con el panel abierto.
+    radioUrl: 'https://radio.ministerioavivandoelfuego.com/public/avivando_el_fuego',
+    officialHost: 'radio.ministerioavivandoelfuego.com',
     shortcode: 'avivando_el_fuego',
     themeColor: '#13062a',
     title: 'Avivando el Fuego Radio · En vivo 24/7',
@@ -40,8 +47,13 @@
     word1: 'AVIVANDO', word2: 'EL FUEGO',
     fontHref: 'https://fonts.googleapis.com/css2?family=Anton&display=swap'
   };
-  // Solo en el banco de pruebas (dev/preview.html en localhost): los juegos de la web local.
-  if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) CFG.gamesUrl = 'http://localhost:5073/juegos?incrustado=radio';
+  // Solo en el banco de pruebas (dev/preview.html): los juegos de la web local. «localhost» hace
+  // de radio oficial y 127.0.0.1 de dirección antigua (otro sitio para el navegador).
+  if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+    CFG.gamesUrl = 'http://localhost:5073/juegos?incrustado=radio';
+    CFG.radioUrl = 'http://localhost:' + (location.port || '8137') + '/dev/preview.html';
+    CFG.officialHost = 'localhost';
+  }
 
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault(); window.__afInstallPrompt = e;
@@ -353,6 +365,11 @@
     var dt = document.querySelector('.af-tab[data-tab="' + p + '"]'); var dp = document.querySelector('.af-pane[data-pane="' + p + '"]');
     if (dt) dt.classList.add('active'); if (dp) dp.classList.add('active');
     bind(); setupMediaSession(); setupExtras();
+    // v18 · llegada con #juegos (desde la dirección antigua o un enlace): el panel ya abierto.
+    if (!EMBEDDED && location.hash === '#juegos' && location.hostname === CFG.officialHost) {
+      try { history.replaceState(history.state, '', location.pathname + location.search); } catch (e) {}
+      Games.open();
+    }
   }
 
   function readNP() { function txt(s) { var n = document.querySelector(s); return n ? (n.innerText || '').trim() : ''; } var img = document.querySelector('img.album_art'); return { title: txt('.now-playing-title'), artist: txt('.now-playing-artist'), art: img ? img.src : '' }; }
@@ -403,6 +420,9 @@
       if (np) { np.querySelector('span').textContent = playing ? 'La radio sigue sonando' : 'La radio está en pausa'; np.querySelector('b').textContent = d.title ? d.title + (d.artist ? ' · ' + d.artist : '') : ''; }
     }
     function open() {
+      // v18 · fuera de la radio oficial (por ejemplo, la dirección antigua) el navegador no guarda la
+      // sesión de la web dentro del marco: se entraría, pero sin cuenta ni avance. Se va a la oficial.
+      if (location.hostname !== CFG.officialHost) { location.href = CFG.radioUrl + '#juegos'; return; }
       panel = panel || document.getElementById('af-games'); if (!panel || abierto) return;
       var box = document.getElementById('af-games-frame');
       if (!box.firstChild) {
