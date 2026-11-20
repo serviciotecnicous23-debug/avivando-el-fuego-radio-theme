@@ -1,5 +1,12 @@
 /* ============================================================================
-   AVIVANDO EL FUEGO — Tema AzuraCast (público) · v18
+   AVIVANDO EL FUEGO — Tema AzuraCast (público) · v19
+   v19 · la radio que no se rinde y que se ve en el carro: suena en UN solo <audio>
+   propio que vive toda la visita (AzuraCast destruía el suyo y creaba otro al fallar
+   la red, y en el iPhone uno nuevo no puede sonar sin un toque, ni con la pantalla
+   bloqueada ni en CarPlay). Si la señal se cae vuelve a conectar sola (1, 2, 4, 8, 15
+   y cada 30 s, sin límite); si una llamada o un aviso la pausa, sigue sola; y en
+   «Ahora suena» (pantalla bloqueada y CarPlay) van la canción, el artista y la
+   carátula desde el primer segundo, con play y pausa que funcionan desde el carro.
    v18 · los juegos siempre desde la radio oficial: en otra dirección (la antigua,
    40.160.2.176.sslip.io) el navegador no guarda la sesión dentro del marco, así que
    "Juegos" lleva a radio.ministerioavivandoelfuego.com con el panel abierto (#juegos).
@@ -40,6 +47,10 @@
     radioUrl: 'https://radio.ministerioavivandoelfuego.com/public/avivando_el_fuego',
     officialHost: 'radio.ministerioavivandoelfuego.com',
     shortcode: 'avivando_el_fuego',
+    // v19 · los servidores de la señal, en orden (el de esta página primero; el otro, de respaldo).
+    servers: ['https://radio.ministerioavivandoelfuego.com', 'https://40.160.2.176.sslip.io'],
+    // La carátula de la radio para «Ahora suena» cuando la canción no trae la suya.
+    logo: 'https://radio.ministerioavivandoelfuego.com/static/uploads/avivando_el_fuego/radio-logo-woodfire-20260520.jpg',
     themeColor: '#13062a',
     title: 'Avivando el Fuego Radio · En vivo 24/7',
     station: 'Avivando el Fuego Radio',
@@ -351,6 +362,324 @@
       '<div id="af-games-frame"></div>' +
     '</section>';
 
+  /* ======================================================================
+     v19 · LA RADIO QUE NO SE RINDE
+     Regla central (la misma de la app): mientras el oyente QUIERE escuchar (tocó play y
+     no tocó pausa), la radio no se rinde. Todo suena en UN solo <audio> que se crea con el
+     primer toque y vive toda la visita: así el iPhone lo deja volver a sonar solo, aunque la
+     pantalla esté bloqueada o se escuche en el carro. Cada reconexión va al directo (nunca
+     audio viejo) y alterna entre el servidor de esta página y el de respaldo.
+     Los botones de AzuraCast (play, calidad, volumen y silencio) mandan aquí: su propio
+     <audio> nunca se usa.
+     ====================================================================== */
+  var Radio = (function () {
+    var ESPERAS = [1000, 2000, 4000, 8000, 15000, 30000];  // la última se repite sin límite
+    var SIN_AVANCE = 12000;       // la señal congelada más de esto se da por perdida
+    var CONEXION_MAXIMA = 15000;  // un intento que no suena en este tiempo se da por fallido
+    var ESTABLE = 20000;          // sonando sin cortes este tiempo, la cuenta de intentos vuelve a 0
+    var MONTAJES = { normal: '/listen/' + CFG.shortcode + '/radio.mp3', ligero: '/listen/' + CFG.shortcode + '/ligero.aac' };
+    var audio = null, quiere = false, estado = 'idle', intento = 0, indice = 0;
+    var reintentoT = 0, plazoT = 0, estableT = 0, vigiaT = 0;
+    var ultimoAvance = 0, ultimaPosicion = -1, pausaPropiaHasta = 0;
+    var calidad = calidadGuardada();
+    var avisos = [];
+
+    function calidadGuardada() {
+      try { var g = localStorage.getItem('af:calidad'); if (g === 'normal' || g === 'ligero') return g; } catch (e) {}
+      // Sin elección: poca señal o «ahorro de datos» en el teléfono → la ligera.
+      var c = navigator.connection;
+      if (c && (c.saveData || /(^|-)(2g|3g)$/.test(String(c.effectiveType || '')))) return 'ligero';
+      return 'normal';
+    }
+    function servidores() {
+      var lista = [], todos = [/^https:/.test(location.protocol) && location.hostname !== 'localhost' ? location.origin : null].concat(CFG.servers);
+      for (var i = 0; i < todos.length; i++) if (todos[i] && lista.indexOf(todos[i]) < 0) lista.push(todos[i]);
+      return lista;
+    }
+    function direccion() {
+      var s = servidores(), base = s[indice % s.length] + MONTAJES[calidad];
+      // Una dirección nueva en cada conexión: el navegador no puede usar lo guardado (siempre al directo).
+      return base + '?af=' + Date.now();
+    }
+    function poner(nuevo) { if (estado === nuevo) return; estado = nuevo; avisar(); }
+    function avisar() { for (var i = 0; i < avisos.length; i++) { try { avisos[i](estado); } catch (e) {} } }
+    function espera() { return ESPERAS[Math.min(Math.max(intento, 1) - 1, ESPERAS.length - 1)]; }
+
+    function crearAudio() {
+      if (audio) return audio;
+      audio = new Audio();
+      audio.preload = 'none';
+      audio.setAttribute('playsinline', '');
+      audio.addEventListener('playing', alSonar);
+      audio.addEventListener('timeupdate', alAvanzar);
+      audio.addEventListener('waiting', alEsperar);
+      audio.addEventListener('stalled', alEsperar);
+      audio.addEventListener('error', function () { if (audio.getAttribute('src')) fallo(); });
+      // Un directo no termina: si «terminó», se cortó la conexión.
+      audio.addEventListener('ended', function () { fallo(); });
+      audio.addEventListener('pause', alPausar);
+      aplicarVolumen();
+      return audio;
+    }
+
+    function conectar() {
+      clearTimeout(reintentoT); clearTimeout(plazoT); reintentoT = 0;
+      if (!quiere) return;
+      crearAudio();
+      if (navigator.onLine === false) { poner('offline'); return; }
+      poner(intento ? 'reconnecting' : 'connecting');
+      pausaPropiaHasta = Date.now() + 1500;
+      try { audio.pause(); } catch (e) {}
+      audio.src = direccion();
+      ultimoAvance = Date.now(); ultimaPosicion = -1;
+      var p = null;
+      try { p = audio.play(); } catch (e) {}
+      if (p && p.catch) p.catch(function (err) {
+        if (!quiere) return;
+        var nombre = err && err.name;
+        if (nombre === 'AbortError') return;          // otro intento la reemplazó
+        if (nombre === 'NotAllowedError') { poner('tap'); return; }  // el navegador pide un toque
+        fallo();
+      });
+      plazoT = setTimeout(fallo, CONEXION_MAXIMA);
+      vigilar();
+    }
+
+    function alSonar() {
+      clearTimeout(plazoT);
+      ultimoAvance = Date.now();
+      poner('playing');
+      clearTimeout(estableT);
+      if (intento) estableT = setTimeout(function () { intento = 0; avisar(); }, ESTABLE);
+    }
+    function alAvanzar() {
+      var t = audio.currentTime;
+      if (t === ultimaPosicion) return;
+      ultimaPosicion = t; ultimoAvance = Date.now();
+      if (quiere && (estado === 'buffering' || estado === 'reconnecting' || estado === 'connecting') && !audio.paused) poner('playing');
+    }
+    function alEsperar() { if (quiere && estado === 'playing') poner('buffering'); }
+    function vigilar() {
+      clearInterval(vigiaT);
+      vigiaT = setInterval(function () {
+        if (!quiere) { clearInterval(vigiaT); vigiaT = 0; return; }
+        if ((estado === 'playing' || estado === 'buffering') && Date.now() - ultimoAvance > SIN_AVANCE) fallo();
+      }, 2000);
+    }
+
+    /** La señal se perdió: se vuelve a conectar sola, con esperas crecientes y alternando servidores. */
+    function fallo() {
+      if (!quiere) return;
+      if (estado === 'reconnecting' && reintentoT) return;  // un fallo = un intento, aunque llegue avisado dos veces
+      clearTimeout(plazoT); clearTimeout(estableT);
+      intento++; indice++;
+      if (navigator.onLine === false) { poner('offline'); return; }  // al volver internet conecta enseguida
+      poner('reconnecting');
+      reintentoT = setTimeout(conectar, espera());
+    }
+
+    /** Una llamada, Siri o un aviso pausó la radio (no fue el oyente): sigue sola en cuanto se pueda. */
+    function alPausar() {
+      if (!quiere || Date.now() < pausaPropiaHasta) return;
+      if (estado === 'reconnecting' && reintentoT) return;
+      clearTimeout(plazoT);
+      intento++;
+      poner('reconnecting');
+      reintentoT = setTimeout(conectar, intento <= 1 ? 1500 : espera());
+    }
+
+    function play() {
+      quiere = true; intento = 0; indice = 0;
+      crearAudio();
+      conectar();     // dentro del toque del oyente: desde ahora este <audio> puede volver a sonar solo
+      Sesion.manejar();
+      Sesion.actualizar();
+    }
+    function pause() {
+      quiere = false;
+      clearTimeout(reintentoT); clearTimeout(plazoT); clearTimeout(estableT); clearInterval(vigiaT);
+      reintentoT = plazoT = estableT = vigiaT = 0;
+      if (audio) {
+        pausaPropiaHasta = Date.now() + 1500;
+        try { audio.pause(); } catch (e) {}
+        // Un directo pausado se suelta: al volver, se conecta al directo (nunca audio viejo) y no gasta datos.
+        audio.removeAttribute('src');
+        try { audio.load(); } catch (e) {}
+      }
+      poner(audio ? 'paused' : 'idle');
+    }
+    function toggle() { if (quiere && estado !== 'tap') pause(); else play(); }
+
+    function ponerCalidad(nueva) {
+      if (nueva !== 'normal' && nueva !== 'ligero') return;
+      try { localStorage.setItem('af:calidad', nueva); } catch (e) {}
+      if (nueva === calidad) return;
+      calidad = nueva; indice = 0;
+      if (quiere) { intento = 0; conectar(); }  // salta a la otra señal ya
+      avisar();
+    }
+
+    /** El volumen y el silencio son los de los controles de AzuraCast. */
+    function aplicarVolumen() {
+      if (!audio) return;
+      var r = document.querySelector('.radio-control-volume-slider input[type="range"]');
+      if (r) { var v = Number(r.value) / (Number(r.max) || 100); if (isFinite(v)) audio.volume = Math.max(0, Math.min(1, v)); }
+      var m = document.querySelector('.radio-control-volume button');
+      if (m) { var l = String(m.getAttribute('aria-label') || m.getAttribute('title') || '').toLowerCase(); audio.muted = !!l && !/^(silenciar|mute)/.test(l); }
+    }
+
+    function cerrarMenu(desde) {
+      var caja = desde.closest && desde.closest('.dropdown'); if (!caja) return;
+      var t = caja.querySelector('.dropdown-toggle'), m = caja.querySelector('.dropdown-menu');
+      if (t) { t.classList.remove('show'); t.setAttribute('aria-expanded', 'false'); }
+      if (m) m.classList.remove('show');
+    }
+
+    var TEXTOS = {
+      connecting: 'Conectando con la radio…',
+      buffering: 'Cargando la señal…',
+      offline: 'Sin internet · vuelve a sonar sola cuando regrese la señal',
+      tap: 'Toca ▶ para seguir escuchando'
+    };
+    /** El botón de play, el aviso de estado y la calidad elegida, a la vista. */
+    function pintar() {
+      var html = document.documentElement, sonando = quiere && estado !== 'tap';
+      html.classList.toggle('af-sonando', sonando);
+      html.classList.toggle('af-ocupado', sonando && estado !== 'playing');
+      var b = document.querySelector('.radio-control-play-button');
+      if (b) {
+        var etiqueta = sonando ? 'Pausar la radio' : 'Escuchar la radio';
+        if (b.getAttribute('aria-label') !== etiqueta) { b.setAttribute('aria-label', etiqueta); b.setAttribute('title', etiqueta); }
+      }
+      var caja = document.getElementById('af-estado');
+      var controles = document.querySelector('.radio-controls');
+      if (!caja && controles) { caja = el('<p id="af-estado" role="status" aria-live="polite" hidden></p>'); controles.insertAdjacentElement('afterend', caja); }
+      if (caja) {
+        var texto = !quiere ? '' : estado === 'reconnecting'
+          ? (intento > 2 ? 'Se cortó la señal · reconectando sola (intento ' + intento + ')…' : 'Se cortó la señal · volviendo a conectar…')
+          : (TEXTOS[estado] || '');
+        if (caja.textContent !== texto) caja.textContent = texto;
+        caja.hidden = !texto;
+      }
+      // La calidad elegida en el botón de la lista (AzuraCast vuelve a pintar el suyo).
+      var t = document.querySelector('.radio-control-select-stream .dropdown-toggle');
+      if (t && t.firstChild && t.firstChild.nodeType === 3) {
+        var nombre = calidad === 'ligero' ? 'Ahorra datos · 64 kbps' : 'Calidad normal · 192 kbps';
+        if (t.firstChild.nodeValue !== nombre) t.firstChild.nodeValue = nombre;
+      }
+    }
+
+    function instalar() {
+      // Fase de captura: los botones de AzuraCast nunca llegan a su reproductor.
+      document.addEventListener('click', function (e) {
+        var t = e.target;
+        if (!t || !t.closest) return;
+        if (t.closest('.radio-control-play-button')) { e.preventDefault(); e.stopImmediatePropagation(); toggle(); return; }
+        var item = t.closest('.radio-control-select-stream .dropdown-item');
+        if (item) {
+          e.preventDefault(); e.stopImmediatePropagation();
+          ponerCalidad(/ahorra|ligero|64\s?kbps|\.aac/i.test(item.textContent || '') ? 'ligero' : 'normal');
+          cerrarMenu(item); pintar();
+          return;
+        }
+        if (t.closest('.radio-control-volume button')) setTimeout(aplicarVolumen, 0);
+      }, true);
+      document.addEventListener('input', function (e) { if (e.target && e.target.closest && e.target.closest('.radio-control-volume-slider')) aplicarVolumen(); }, true);
+      // Volvió internet: se conecta ya, sin esperar el resto de la espera.
+      window.addEventListener('online', function () { if (quiere && estado !== 'playing') { intento = Math.max(intento, 1); conectar(); } });
+      window.addEventListener('offline', function () { if (quiere && estado !== 'playing') { clearTimeout(reintentoT); reintentoT = 0; poner('offline'); } });
+      // El oyente vuelve a la radio: si debía sonar y no suena, conecta de inmediato.
+      function alVolver() {
+        if (document.hidden || !quiere) return;
+        if (estado === 'reconnecting' || estado === 'offline' || (audio && audio.paused && estado !== 'tap') ||
+            ((estado === 'playing' || estado === 'buffering') && Date.now() - ultimoAvance > SIN_AVANCE)) { intento = Math.max(intento, 1); conectar(); }
+      }
+      document.addEventListener('visibilitychange', alVolver);
+      window.addEventListener('pageshow', alVolver);
+      window.addEventListener('focus', alVolver);
+      avisos.push(function () { pintar(); Sesion.actualizar(); });
+    }
+
+    return {
+      instalar: instalar, play: play, pause: pause, toggle: toggle, pintar: pintar, ponerCalidad: ponerCalidad,
+      estado: function () { return estado; },
+      sonando: function () { return quiere && estado !== 'tap'; },
+      calidad: function () { return calidad; },
+      // Solo para revisar desde la consola (y las pruebas del tema).
+      _audio: function () { return audio; },
+      _intento: function () { return intento; }
+    };
+  })();
+
+  /* ======================================================================
+     v19 · «AHORA SUENA» EN LA PANTALLA BLOQUEADA Y EN CARPLAY
+     La canción, el artista y la carátula van desde el primer segundo (antes esperaban un
+     reloj de 4 s que el iPhone congela con la pantalla apagada) y se renuevan con cada
+     canción. Play, pausa y stop del carro, los audífonos o el volante mandan a la radio.
+     ====================================================================== */
+  // Los títulos que llegan de YouTube traen ruido: «|Kairos Live| Video Oficial |».
+  function limpiarTitulo(texto) {
+    return String(texto || '')
+      .replace(/\|/g, ' ')
+      .replace(/[([]?\s*(video\s*oficial|official\s*(music\s*)?video|videoclip|lyric\s*video|v[ií]deo\s*l[ií]rico|con\s*letra|letra|audio\s*oficial|official\s*audio|hd|4k)\s*[)\]]?/gi, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .replace(/^[\s\-–—·]+|[\s\-–—·]+$/g, '')
+      .trim();
+  }
+  var Sesion = (function () {
+    var ms = 'mediaSession' in navigator ? navigator.mediaSession : null;
+    var ultima = '', desdeApi = null, consultaT = 0;
+    function manejar() {
+      if (!ms) return;
+      function h(accion, fn) { try { ms.setActionHandler(accion, fn); } catch (e) {} }
+      h('play', function () { Radio.play(); });
+      h('pause', function () { Radio.pause(); });
+      h('stop', function () { Radio.pause(); });
+      // Es un directo: no hay adelantar, retroceder ni canción anterior o siguiente.
+      ['seekbackward', 'seekforward', 'seekto', 'previoustrack', 'nexttrack'].forEach(function (a) { h(a, null); });
+    }
+    function lo() {
+      var d = readNP();
+      if (desdeApi && (!d.title || desdeApi.at > Date.now() - 30000)) d = { title: desdeApi.title || d.title, artist: desdeApi.artist || d.artist, art: desdeApi.art || d.art };
+      return d;
+    }
+    function actualizar() {
+      if (!ms) return;
+      var d = lo();
+      var titulo = limpiarTitulo(d.title) || CFG.station;
+      var artista = limpiarTitulo(d.artist) || (d.title ? CFG.station : 'En vivo · ' + CFG.tagline);
+      var arte = d.art || CFG.logo;
+      var clave = titulo + '|' + artista + '|' + arte;
+      // (también si otro código cambió «Ahora suena»: se repone)
+      var actual = ms.metadata;
+      if ((clave !== ultima || !actual || actual.title !== titulo) && typeof window.MediaMetadata === 'function') {
+        try {
+          ms.metadata = new window.MediaMetadata({
+            title: titulo, artist: artista, album: CFG.station,
+            artwork: [96, 128, 192, 256, 384, 512].map(function (s) { return { src: arte, sizes: s + 'x' + s }; })
+          });
+          ultima = clave;
+        } catch (e) {}
+      }
+      try { ms.playbackState = Radio.sonando() ? 'playing' : (Radio.estado() === 'idle' ? 'none' : 'paused'); } catch (e) {}
+      // Mientras suena, la canción se pregunta también al servidor (la página puede estar dormida).
+      clearTimeout(consultaT);
+      if (Radio.sonando()) consultaT = setTimeout(consultar, 20000);
+    }
+    function consultar() {
+      if (!window.fetch || !Radio.sonando()) return;
+      fetch('/api/nowplaying/' + CFG.shortcode, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+        var s = d && d.now_playing && d.now_playing.song;
+        if (s) desdeApi = { title: s.title || s.text || '', artist: s.artist || '', art: s.art || '', at: Date.now() };
+      }).catch(function () {}).then(actualizar);
+    }
+    return { manejar: manejar, actualizar: actualizar, consultar: consultar };
+  })();
+
+  if (!ACCOUNT_PAGE) Radio.instalar();
+  // Para revisar desde la consola: __afRadio.estado(), __afRadio._audio()…
+  window.__afRadio = Radio;
+
   function detectPlatform() { var u = navigator.userAgent; if (/iPhone|iPad|iPod/i.test(u)) return 'ios'; if (/Android/i.test(u)) return 'android'; return 'desktop'; }
 
   function inject() {
@@ -375,11 +704,9 @@
   function readNP() { function txt(s) { var n = document.querySelector(s); return n ? (n.innerText || '').trim() : ''; } var img = document.querySelector('img.album_art'); return { title: txt('.now-playing-title'), artist: txt('.now-playing-artist'), art: img ? img.src : '' }; }
   function fillNP() { var d = readNP(); document.getElementById('af-np-art').src = d.art || ''; document.getElementById('af-np-title').textContent = d.title || '—'; document.getElementById('af-np-artist').textContent = d.artist || ''; }
 
-  function setupMediaSession() {
-    if (!('mediaSession' in navigator)) return; var last = '';
-    setInterval(function () { var d = readNP(); var key = d.title + '|' + d.artist; if (!d.title || key === last) return; last = key;
-      try { navigator.mediaSession.metadata = new window.MediaMetadata({ title: d.title, artist: d.artist || CFG.station, album: CFG.station, artwork: d.art ? [{ src: d.art, sizes: '512x512', type: 'image/jpeg' }] : [] }); } catch (e) {} }, 4000);
-  }
+  // v19 · «Ahora suena» lo lleva Sesion (arriba): aquí solo se toman los botones del sistema (después de
+  // que AzuraCast puso el suyo, que detenía la radio y dejaba muerto el play del carro) y se pinta lo actual.
+  function setupMediaSession() { Sesion.manejar(); Sesion.actualizar(); Radio.pintar(); }
 
   function openOverlay(id) { var o = document.getElementById(id); if (!o) return; if (id === 'af-np') { fillNP(); if (window.__afNPT) clearInterval(window.__afNPT); window.__afNPT = setInterval(fillNP, 1500); } o.classList.add('show'); document.body.style.overflow = 'hidden'; }
   function closeOverlay(id) { var o = document.getElementById(id); if (!o) return; o.classList.remove('show'); document.body.style.overflow = ''; if (id === 'af-np' && window.__afNPT) { clearInterval(window.__afNPT); window.__afNPT = null; } }
@@ -510,8 +837,20 @@
 
   // Temporizador para dormir: al cumplirse, pulsa "Detener" del reproductor de AzuraCast.
   var Timer = { end: 0, iv: 0 };
-  function isPlaying() { var b = document.querySelector('.radio-control-play-button'); if (!b) return false; var l = String(b.getAttribute('aria-label') || b.getAttribute('title') || '').toLowerCase(); return !!l && l.indexOf('reproducir') === -1 && l.indexOf('play') === -1; }
-  function stopRadio() { var b = document.querySelector('.radio-control-play-button'); if (b && isPlaying()) b.click(); }
+  // v19 · el estado es el del reproductor propio (el botón de AzuraCast ya no lo sabe).
+  function isPlaying() { return Radio.sonando(); }
+  // Si AzuraCast llegara a crear su propio <audio> (por ejemplo con ?autoplay), se calla: nunca suenan dos.
+  function callarAzuracast() {
+    var suyos = document.querySelectorAll('audio');
+    for (var i = 0; i < suyos.length; i++) {
+      var a = suyos[i]; if (!a.getAttribute('src')) continue;
+      var sonaba = !a.paused;
+      try { a.pause(); } catch (e) {}
+      a.removeAttribute('src'); try { a.load(); } catch (e) {}
+      if (sonaba && !Radio.sonando()) Radio.play();
+    }
+  }
+  function stopRadio() { if (Radio.sonando()) Radio.pause(); }
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
   function minutesLabel(min) { return min < 60 ? min + ' min' : Math.floor(min / 60) + ' h' + (min % 60 ? ' ' + (min % 60) : ''); }
   function updateTimerChip() {
@@ -529,7 +868,7 @@
   function setupExtras() {
     relabelStreams(); ensureExtras();
     var pending = false;
-    var mo = new MutationObserver(function () { if (pending) return; pending = true; setTimeout(function () { pending = false; relabelStreams(); ensureExtras(); }, 60); });
+    var mo = new MutationObserver(function () { if (pending) return; pending = true; setTimeout(function () { pending = false; relabelStreams(); ensureExtras(); callarAzuracast(); Radio.pintar(); Sesion.actualizar(); }, 60); });
     mo.observe(document.querySelector('.public-page') || document.body, { childList: true, subtree: true, characterData: true });
     setInterval(fetchNext, 30000);
     // Con la pantalla apagada el navegador puede frenar los relojes: al volver, si ya pasó
