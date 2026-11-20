@@ -675,6 +675,8 @@
   })();
 
   if (!ACCOUNT_PAGE) Radio.instalar();
+  // Para revisar desde la consola: __afRadio.estado(), __afRadio._audio()…
+  window.__afRadio = Radio;
 
   function detectPlatform() { var u = navigator.userAgent; if (/iPhone|iPad|iPod/i.test(u)) return 'ios'; if (/Android/i.test(u)) return 'android'; return 'desktop'; }
 
