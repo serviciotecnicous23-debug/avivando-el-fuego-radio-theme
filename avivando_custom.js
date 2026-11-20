@@ -650,7 +650,9 @@
       var artista = limpiarTitulo(d.artist) || (d.title ? CFG.station : 'En vivo · ' + CFG.tagline);
       var arte = d.art || CFG.logo;
       var clave = titulo + '|' + artista + '|' + arte;
-      if (clave !== ultima && typeof window.MediaMetadata === 'function') {
+      // (también si otro código cambió «Ahora suena»: se repone)
+      var actual = ms.metadata;
+      if ((clave !== ultima || !actual || actual.title !== titulo) && typeof window.MediaMetadata === 'function') {
         try {
           ms.metadata = new window.MediaMetadata({
             title: titulo, artist: artista, album: CFG.station,
