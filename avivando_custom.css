@@ -453,3 +453,28 @@ html.af-games-open, html.af-games-open body { overflow: hidden !important; }
     flex: 0 0 auto; flex-direction: row; min-height: 44px; padding: 0 18px !important; border-radius: 999px !important;
   }
 }
+
+/* ============================================================================
+   v19 · La radio que no se rinde: el botón dice si suena y avisa si reconecta
+   ========================================================================== */
+/* Sonando: el play se vuelve «detener» (un cuadrado blanco en vez del triángulo de AzuraCast). */
+html.af-sonando .radio-control-play-button svg { display: none !important; }
+html.af-sonando .radio-control-play-button::before {
+  content: ""; display: block; width: 20px; height: 20px; border-radius: 4px; background: #fff;
+  box-shadow: 0 0 10px rgba(255,255,255,.35);
+}
+/* Conectando, cargando o reconectando: el halo gira en vez de latir. */
+html.af-ocupado .radio-control-play-button::after {
+  border-style: dashed; border-color: rgba(255,200,90,.85);
+  animation: af19-gira 1.4s linear infinite;
+}
+@keyframes af19-gira { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+/* El aviso: «Se cortó la señal · volviendo a conectar…», «Sin internet…» */
+#af-estado {
+  width: 100%; margin: 8px 4px 0; font-size: 13px; line-height: 1.4; font-weight: 600;
+  color: var(--af-fire-soft);
+}
+#af-estado[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  html.af-ocupado .radio-control-play-button::after { animation: none; }
+}
