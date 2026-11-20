@@ -1,5 +1,7 @@
 /* ============================================================================
-   AVIVANDO EL FUEGO — Tema AzuraCast (público) · v19
+   AVIVANDO EL FUEGO — Tema AzuraCast (público) · v19.1
+   v19.1 · «Ahora suena» siempre con los datos limpios: AzuraCast los vuelve a escribir
+   con cada canción (título en bruto y una sola carátula) y el tema los repone al instante.
    v19 · la radio que no se rinde y que se ve en el carro: suena en UN solo <audio>
    propio que vive toda la visita (AzuraCast destruía el suyo y creaba otro al fallar
    la red, y en el iPhone uno nuevo no puede sonar sin un toque, ni con la pantalla
@@ -650,9 +652,11 @@
       var artista = limpiarTitulo(d.artist) || (d.title ? CFG.station : 'En vivo · ' + CFG.tagline);
       var arte = d.art || CFG.logo;
       var clave = titulo + '|' + artista + '|' + arte;
-      // (también si otro código cambió «Ahora suena»: se repone)
+      // AzuraCast vuelve a escribir «Ahora suena» con cada dato que le llega (el título en bruto, sin artista
+      // de respaldo y una sola carátula): si lo que hay no es lo nuestro, se repone al instante.
       var actual = ms.metadata;
-      if ((clave !== ultima || !actual || actual.title !== titulo) && typeof window.MediaMetadata === 'function') {
+      var nuestro = !!actual && actual.title === titulo && actual.artist === artista && !!actual.artwork && actual.artwork.length === 6;
+      if ((clave !== ultima || !nuestro) && typeof window.MediaMetadata === 'function') {
         try {
           ms.metadata = new window.MediaMetadata({
             title: titulo, artist: artista, album: CFG.station,
